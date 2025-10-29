@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Writing Test Collection - EO.EO</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/test-collection.css">
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="logo" onclick="window.location.href='/'">
+            <div class="logo-icon">e</div>
+            <span>eo.eo</span>
+        </div>
+        <nav>
+            <div class="nav-dropdown">IELTS Online Test ▼</div>
+            <div class="search-box">
+                <input type="text" placeholder="Search ..." id="searchInput">
+                <span>🔍</span>
+            </div>
+            <div class="user-profile">
+                <img src="/images/user-avatar.png" alt="User">
+                <span>▼</span>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Main Content -->
+    <main class="test-collection-page">
+        <div class="container">
+            <h1 class="page-title">Writing test collection</h1>
+
+            <div class="content-wrapper">
+                <!-- Sidebar -->
+                <aside class="sidebar">
+                    <div class="filter-section">
+                        <h3>Search</h3>
+                        <div class="search-box-sidebar">
+                            <input type="text" placeholder="Search" id="sidebarSearch">
+                            <button>🔍</button>
+                        </div>
+                    </div>
+
+                    <div class="filter-section">
+                        <h3>Sort</h3>
+                        <label class="radio-option">
+                            <input type="radio" name="sort" value="newest" checked>
+                            <span>Newest</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="sort" value="oldest">
+                            <span>Oldest</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="sort" value="most-attempted">
+                            <span>Most attempted</span>
+                        </label>
+                    </div>
+                </aside>
+
+                <!-- Test Grid -->
+                <section class="test-grid" id="writingTestGrid">
+                    <!-- Tests will be loaded dynamically -->
+                </section>
+            </div>
+
+            <!-- Pagination -->
+            <div class="pagination">
+                <button class="page-btn">‹</button>
+                <button class="page-btn active">1</button>
+                <button class="page-btn">2</button>
+                <button class="page-btn">3</button>
+                <button class="page-btn">4</button>
+                <button class="page-btn">5</button>
+                <span>...</span>
+                <button class="page-btn">20</button>
+                <button class="page-btn">›</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <div class="footer-brand">
+                <div class="footer-logo">
+                    <div class="logo-icon">e</div>
+                    <span>eo.eo</span>
+                </div>
+                <p>Test IELTS by AI</p>
+            </div>
+
+            <div class="footer-section">
+                <h4>Contact Us</h4>
+                <p><strong>Hotline:</strong> 123-456-7890</p>
+                <p><strong>Gmail:</strong> khongcocamon@gmail.com</p>
+            </div>
+
+            <div class="footer-section">
+                <h4>Social</h4>
+                <div class="social-icons">
+                    <a href="#">f</a>
+                    <a href="#">📷</a>
+                    <a href="#">🐦</a>
+                    <a href="#">▶</a>
+                    <a href="#">W</a>
+                </div>
+            </div>
+        </div>
+        <div class="copyright">
+            © 2025 ATI Team | All Rights Reserved
+        </div>
+    </footer>
+
+    <script src="/js/main.js"></script>
+    <script src="/js/test-collection.js"></script>
+    <script>
+        // Override test type for writing
+        document.addEventListener('DOMContentLoaded', function() {
+            // Generate writing tests
+            const writingTests = generateWritingTests();
+            renderTests(writingTests);
+        });
+        
+        function generateWritingTests() {
+            const tests = [];
+            const cams = [20, 19, 18, 17];
+            const backgrounds = ['purple', 'beige', 'dark', 'green'];
+            
+            cams.forEach((cam, index) => {
+                for (let i = 4; i >= 1; i--) {
+                    tests.push({
+                        id: `cam${cam}-test${i}`,
+                        title: `CAM ${cam} - Writing Test ${i}`,
+                        views: '33K lượt làm',
+                        background: backgrounds[index],
+                        cam: cam,
+                        testNumber: i
+                    });
+                }
+            });
+            
+            return tests;
+        }
+    </script>
+</body>
+</html>

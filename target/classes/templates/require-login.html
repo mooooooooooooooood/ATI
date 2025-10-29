@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${pageTitle}">Login Required - IELTS Test With AI</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .require-login-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 50px;
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+        }
+        .lock-icon {
+            font-size: 80px;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+            font-size: 32px;
+            margin: 0 0 15px 0;
+        }
+        p {
+            color: #666;
+            font-size: 16px;
+            line-height: 1.6;
+            margin: 0 0 30px 0;
+        }
+        .buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 14px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s;
+        }
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+        .btn-secondary:hover {
+            background: #d0d0d0;
+            transform: translateY(-2px);
+        }
+        .features {
+            margin-top: 40px;
+            text-align: left;
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        .features h3 {
+            color: #333;
+            margin: 0 0 15px 0;
+            font-size: 18px;
+        }
+        .features ul {
+            margin: 0;
+            padding-left: 20px;
+            color: #666;
+        }
+        .features li {
+            margin: 8px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="require-login-container">
+        <div class="lock-icon">🔒</div>
+        <h1>Login Required</h1>
+        <p>You need to sign in to access this feature. Create a free account to start your IELTS preparation journey!</p>
+        
+        <div class="buttons">
+            <a href="/user/login" class="btn btn-primary">Sign In</a>
+            <a href="/user/signup" class="btn btn-primary">Create Account</a>
+            <a href="/" class="btn btn-secondary">Back to Home</a>
+        </div>
+
+        <div class="features">
+            <h3>✨ What you'll get with an account:</h3>
+            <ul>
+                <li>Access to all IELTS practice tests (Writing, Reading, Listening, Speaking)</li>
+                <li>AI-powered scoring and feedback</li>
+                <li>Track your progress and improvement</li>
+                <li>Personalized study recommendations</li>
+                <li>Save your test results and history</li>
+                <li>Set and achieve your target score</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
