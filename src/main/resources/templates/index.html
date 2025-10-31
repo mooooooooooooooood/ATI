@@ -5,26 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title th:text="${pageTitle}">IELTS Test With AI</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/index.css}">
+    <link rel="stylesheet" th:href="@{/css/header.css}">
+    <link rel="stylesheet" th:href="@{/css/footer.css}">
+
 </head>
 <body>
     <!-- Header -->
     <header th:replace="~{fragments/header :: header}"></header>
 
+    <main>
     <!-- Hero Section -->
     <section class="hero">
         <div class="container">
             <div class="hero-content">
                 <div class="hero-text">
                     <h1>IELTS Test<br>With AI</h1>
-                    
-                    <!-- Hiển thị nút khác nhau tùy theo trạng thái đăng nhập -->
-                    <div class="hero-buttons">
-                        <a th:if="${!isLoggedIn}" href="/user/login" class="btn btn-primary">Sign In</a>
-                        <a th:if="${isLoggedIn}" href="/dashboard" class="btn btn-primary">Go to Dashboard</a>
-                    </div>
-                </div>
-                <div class="hero-image">
-                    <img th:src="@{/images/hero-student.png}" alt="Student">
                 </div>
             </div>
         </div>
@@ -38,7 +34,7 @@
                 <div class="category-card">
                     <a th:href="${isLoggedIn ? '/test/writing' : '/require-login?redirect=/test/writing'}">
                         <div class="category-icon">
-                            <img th:src="@{/images/writing-icon.svg}" alt="Writing">
+                            <img th:src="@{/images/writing.png}" alt="Writing">
                         </div>
                         <h3>Writing</h3>
                         <p>30 Tests</p>
@@ -49,7 +45,7 @@
                 <div class="category-card">
                     <a th:href="${isLoggedIn ? '/test/listening' : '/require-login?redirect=/test/listening'}">
                         <div class="category-icon">
-                            <img th:src="@{/images/listening-icon.svg}" alt="Listening">
+                            <img th:src="@{/images/listening.png}" alt="Listening">
                         </div>
                         <h3>Listening</h3>
                         <p>40 Tests</p>
@@ -60,7 +56,7 @@
                 <div class="category-card">
                     <a th:href="${isLoggedIn ? '/test/speaking' : '/require-login?redirect=/test/speaking'}">
                         <div class="category-icon">
-                            <img th:src="@{/images/speaking-icon.svg}" alt="Speaking">
+                            <img th:src="@{/images/speaking.png}" alt="Speaking">
                         </div>
                         <h3>Speaking</h3>
                         <p>50 Tests</p>
@@ -71,7 +67,7 @@
                 <div class="category-card">
                     <a th:href="${isLoggedIn ? '/test/reading' : '/require-login?redirect=/test/reading'}">
                         <div class="category-icon">
-                            <img th:src="@{/images/reading-icon.svg}" alt="Reading">
+                            <img th:src="@{/images/reading.png}" alt="Reading">
                         </div>
                         <h3>Reading</h3>
                         <p>55 Tests</p>
@@ -80,6 +76,7 @@
             </div>
         </div>
     </section>
+    </main>
 
     <!-- Footer -->
     <footer th:replace="~{fragments/footer :: footer}"></footer>

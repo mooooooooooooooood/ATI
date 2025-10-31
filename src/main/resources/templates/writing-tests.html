@@ -6,26 +6,12 @@
     <title>Writing Test Collection - EO.EO</title>
     <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="/css/test-collection.css">
+    <link rel="stylesheet" th:href="@{/css/header.css}">
+    <link rel="stylesheet" th:href="@{/css/footer.css}">
 </head>
 <body>
     <!-- Header -->
-    <header>
-        <div class="logo" onclick="window.location.href='/'">
-            <div class="logo-icon">e</div>
-            <span>eo.eo</span>
-        </div>
-        <nav>
-            <div class="nav-dropdown">IELTS Online Test ▼</div>
-            <div class="search-box">
-                <input type="text" placeholder="Search ..." id="searchInput">
-                <span>🔍</span>
-            </div>
-            <div class="user-profile">
-                <img src="/images/user-avatar.png" alt="User">
-                <span>▼</span>
-            </div>
-        </nav>
-    </header>
+    <header th:replace="~{fragments/header :: header}"></header>
 
     <!-- Main Content -->
     <main class="test-collection-page">
@@ -82,38 +68,7 @@
     </main>
 
     <!-- Footer -->
-    <footer>
-        <div class="footer-content">
-            <div class="footer-brand">
-                <div class="footer-logo">
-                    <div class="logo-icon">e</div>
-                    <span>eo.eo</span>
-                </div>
-                <p>Test IELTS by AI</p>
-            </div>
-
-            <div class="footer-section">
-                <h4>Contact Us</h4>
-                <p><strong>Hotline:</strong> 123-456-7890</p>
-                <p><strong>Gmail:</strong> khongcocamon@gmail.com</p>
-            </div>
-
-            <div class="footer-section">
-                <h4>Social</h4>
-                <div class="social-icons">
-                    <a href="#">f</a>
-                    <a href="#">📷</a>
-                    <a href="#">🐦</a>
-                    <a href="#">▶</a>
-                    <a href="#">W</a>
-                </div>
-            </div>
-        </div>
-        <div class="copyright">
-            © 2025 ATI Team | All Rights Reserved
-        </div>
-    </footer>
-
+    <footer th:replace="~{fragments/footer :: footer}"></footer>
     <script src="/js/main.js"></script>
     <script src="/js/test-collection.js"></script>
     <script>

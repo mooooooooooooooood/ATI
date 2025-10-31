@@ -108,7 +108,7 @@ public class AuthController {
         return "forgot-password";
     }
 
-    @PostMapping("/forgot-password")
+    @PostMapping("user/forgot-password")
     public String processForgotPassword(
             @RequestParam("email") String email,
             RedirectAttributes redirectAttributes) {

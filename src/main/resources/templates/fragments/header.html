@@ -2,6 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
+    <link rel="stylesheet" th:href="@{/css/header.css}">
 </head>
 <body>
     <!-- Header Fragment -->
@@ -11,8 +12,7 @@
                 <!-- Logo -->
                 <div class="logo">
                     <a href="/">
-                        <img th:src="@{/images/logo.png}" alt="IELTS AI">
-                        <span>eo.eo</span>
+                        <img th:src="@{/images/Logo ATI.png}" alt="IELTS AI">
                     </a>
                 </div>
 
@@ -21,7 +21,12 @@
                     <ul>
                         <li><a href="/">Home</a></li>
                         <li class="dropdown">
-                            <a href="#" class="dropdown-toggle">IELTS Online Test</a>
+                            <button type="button" class="dropdown-toggle">
+                                <span>IELTS Online Test</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="chevron-icon">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                            </button>
                             <ul class="dropdown-menu">
                                 <li><a th:href="${session.loggedInUser != null ? '/test/writing' : '/require-login?redirect=/test/writing'}">Writing Tests</a></li>
                                 <li><a th:href="${session.loggedInUser != null ? '/test/listening' : '/require-login?redirect=/test/listening'}">Listening Tests</a></li>
@@ -29,8 +34,6 @@
                                 <li><a th:href="${session.loggedInUser != null ? '/test/reading' : '/require-login?redirect=/test/reading'}">Reading Tests</a></li>
                             </ul>
                         </li>
-                        <li><a href="/about">About</a></li>
-                        <li><a href="/contact">Contact</a></li>
                     </ul>
                 </nav>
 
@@ -49,23 +52,24 @@
 
                 <!-- User Actions -->
                 <div class="header-actions">
-                    <!-- Guest: Show Sign Up button -->
-                    <div th:if="${session.loggedInUser == null}">
-                        <a href="/user/register" class="btn btn-signup">Sign Up</a>
+                    <!-- Guest: Show Sign In and Sign Up buttons -->
+                    <div th:if="${session.loggedInUser == null}" class="guest-actions">
+                        <a href="/user/login" class="btn btn-signin">Sign In</a>
+                        <a href="/user/signup" class="btn btn-signup">Sign Up</a>
                     </div>
-                    
+                   
                     <!-- Logged In: Show User Menu -->
                     <div th:if="${session.loggedInUser != null}" class="user-menu">
-                        <button class="user-menu-toggle">
-                            <img th:src="${session.loggedInUser.avatar != null ? session.loggedInUser.avatar : '/images/default-avatar.png'}" 
-                                 alt="User Avatar" 
+                        <button class="user-menu-toggle" type="button">
+                            <img th:src="${session.loggedInUser.avatar != null ? session.loggedInUser.avatar : '/images/default-avatar.png'}"
+                                 alt="User Avatar"
                                  class="user-avatar">
                             <span th:text="${session.loggedInUser.name}">User</span>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="chevron-icon">
                                 <polyline points="6 9 12 15 18 9"></polyline>
                             </svg>
                         </button>
-                        
+                       
                         <ul class="user-dropdown">
                             <li><a href="/dashboard">Dashboard</a></li>
                             <li><a href="/user/profile">My Profile</a></li>
@@ -74,249 +78,70 @@
                             <li><a href="/user/logout">Logout</a></li>
                         </ul>
                     </div>
-                </div>
-
-                <!-- Mobile Menu Toggle -->
-                <button class="mobile-menu-toggle">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </button>
+                </div>        
             </div>
         </div>
     </header>
 
-    <style>
-        .site-header {
-            background: #fff;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-        }
-        
-        .header-content {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 15px 0;
-            gap: 30px;
-        }
-        
-        .logo a {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            text-decoration: none;
-            font-size: 24px;
-            font-weight: bold;
-            color: #2d3748;
-        }
-        
-        .logo img {
-            width: 40px;
-            height: 40px;
-        }
-        
-        .main-nav ul {
-            display: flex;
-            list-style: none;
-            gap: 30px;
-            margin: 0;
-            padding: 0;
-        }
-        
-        .main-nav a {
-            text-decoration: none;
-            color: #2d3748;
-            font-weight: 500;
-            transition: color 0.3s;
-        }
-        
-        .main-nav a:hover {
-            color: #667eea;
-        }
-        
-        .dropdown {
-            position: relative;
-        }
-        
-        .dropdown-menu {
-            display: none;
-            position: absolute;
-            top: 100%;
-            left: 0;
-            background: white;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            border-radius: 8px;
-            min-width: 200px;
-            padding: 10px 0;
-        }
-        
-        .dropdown:hover .dropdown-menu {
-            display: block;
-        }
-        
-        .dropdown-menu li {
-            padding: 0;
-        }
-        
-        .dropdown-menu a {
-            display: block;
-            padding: 10px 20px;
-        }
-        
-        .header-search {
-            flex: 1;
-            max-width: 300px;
-        }
-        
-        .header-search form {
-            display: flex;
-            background: #f7fafc;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        
-        .header-search input {
-            flex: 1;
-            border: none;
-            background: transparent;
-            padding: 10px 15px;
-            outline: none;
-        }
-        
-        .header-search button {
-            background: transparent;
-            border: none;
-            padding: 10px 15px;
-            cursor: pointer;
-            color: #718096;
-        }
-        
-        .btn-signup {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 10px 24px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-weight: 600;
-            transition: all 0.3s;
-        }
-        
-        .btn-signup:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-        }
-        
-        .user-menu {
-            position: relative;
-        }
-        
-        .user-menu-toggle {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            background: transparent;
-            border: none;
-            cursor: pointer;
-            padding: 8px;
-            border-radius: 8px;
-            transition: background 0.3s;
-        }
-        
-        .user-menu-toggle:hover {
-            background: #f7fafc;
-        }
-        
-        .user-avatar {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            object-fit: cover;
-        }
-        
-        .user-dropdown {
-            display: none;
-            position: absolute;
-            top: 100%;
-            right: 0;
-            background: white;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            border-radius: 8px;
-            min-width: 180px;
-            padding: 10px 0;
-            margin-top: 10px;
-            list-style: none;
-        }
-        
-        .user-menu:hover .user-dropdown {
-            display: block;
-        }
-        
-        .user-dropdown a {
-            display: block;
-            padding: 10px 20px;
-            color: #2d3748;
-            text-decoration: none;
-            transition: background 0.3s;
-        }
-        
-        .user-dropdown a:hover {
-            background: #f7fafc;
-        }
-        
-        .divider {
-            height: 1px;
-            background: #e2e8f0;
-            margin: 8px 0;
-        }
-        
-        .mobile-menu-toggle {
-            display: none;
-            flex-direction: column;
-            gap: 5px;
-            background: transparent;
-            border: none;
-            cursor: pointer;
-            padding: 8px;
-        }
-        
-        .mobile-menu-toggle span {
-            width: 25px;
-            height: 3px;
-            background: #2d3748;
-            border-radius: 3px;
-            transition: all 0.3s;
-        }
-        
-        @media (max-width: 768px) {
-            .main-nav,
-            .header-search {
-                display: none;
-            }
-            
-            .mobile-menu-toggle {
-                display: flex;
-            }
-        }
-    </style>
-
     <script>
-        // User menu toggle for mobile
         document.addEventListener('DOMContentLoaded', function() {
-            const userMenuToggle = document.querySelector('.user-menu-toggle');
-            const userDropdown = document.querySelector('.user-dropdown');
+            // Dropdown "IELTS Online Test" toggle
+            const dropdownToggle = document.querySelector('.dropdown-toggle');
+            const dropdown = document.querySelector('.dropdown');
             
-            if (userMenuToggle && userDropdown) {
-                userMenuToggle.addEventListener('click', function(e) {
+            if (dropdownToggle && dropdown) {
+                dropdownToggle.addEventListener('click', function(e) {
+                    e.preventDefault();
                     e.stopPropagation();
-                    userDropdown.style.display = userDropdown.style.display === 'block' ? 'none' : 'block';
+                    dropdown.classList.toggle('active');
                 });
-                
-                document.addEventListener('click', function() {
-                    userDropdown.style.display = 'none';
+
+                // Close dropdown when clicking outside
+                document.addEventListener('click', function(e) {
+                    if (!dropdown.contains(e.target)) {
+                        dropdown.classList.remove('active');
+                    }
                 });
+
+                // Prevent dropdown from closing when clicking inside menu
+                const dropdownMenu = dropdown.querySelector('.dropdown-menu');
+                if (dropdownMenu) {
+                    dropdownMenu.addEventListener('click', function(e) {
+                        // Allow navigation to links
+                        if (e.target.tagName === 'A') {
+                            dropdown.classList.remove('active');
+                        }
+                    });
+                }
+            }
+
+            // User menu toggle
+            const userMenuToggle = document.querySelector('.user-menu-toggle');
+            const userMenu = document.querySelector('.user-menu');
+            
+            if (userMenuToggle && userMenu) {
+                userMenuToggle.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    userMenu.classList.toggle('active');
+                });
+
+                // Close user menu when clicking outside
+                document.addEventListener('click', function(e) {
+                    if (!userMenu.contains(e.target)) {
+                        userMenu.classList.remove('active');
+                    }
+                });
+
+                // Close user menu when clicking a link
+                const userDropdown = userMenu.querySelector('.user-dropdown');
+                if (userDropdown) {
+                    userDropdown.addEventListener('click', function(e) {
+                        if (e.target.tagName === 'A') {
+                            userMenu.classList.remove('active');
+                        }
+                    });
+                }
             }
         });
     </script>
