@@ -42,54 +42,48 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .authorizeHttpRequests(auth -> auth
-                // Public resources
-                .requestMatchers("/", "/home", "/index").permitAll()
-                .requestMatchers("/user/login", "/user/signup", "/user/register").permitAll()
-                .requestMatchers("/user/forgot-password", "/user/reset-password").permitAll()
-                .requestMatchers("/user/verify-email").permitAll()
-                .requestMatchers("/css/**", "/js/**", "/images/**", "/fonts/**").permitAll()
-                .requestMatchers("/error").permitAll()
-                
-                // Require login redirect
-                .requestMatchers("/require-login").permitAll()
-                
-                // Protected resources
-                .requestMatchers("/dashboard/**", "/profile/**").authenticated()
-                .requestMatchers("/test/**").authenticated()
-                .requestMatchers("/admin/**").hasRole("ADMIN")
-                
-                // All other requests require authentication
-                .anyRequest().authenticated()
-            )
-            .formLogin(form -> form
-                .loginPage("/user/login")
-                .loginProcessingUrl("/user/login")
-                .defaultSuccessUrl("/dashboard", true)
-                .failureUrl("/user/login?error=true")
-                .usernameParameter("email")
-                .passwordParameter("password")
-                .permitAll()
-            )
-            .logout(logout -> logout
-                .logoutRequestMatcher(new AntPathRequestMatcher("/user/logout"))
-                .logoutSuccessUrl("/user/login?logout=true")
-                .invalidateHttpSession(true)
-                .deleteCookies("JSESSIONID")
-                .permitAll()
-            )
-            .rememberMe(remember -> remember
-                .key("uniqueAndSecret")
-                .tokenValiditySeconds(86400) // 24 hours
-                .userDetailsService(userDetailsService)
-            )
-            .exceptionHandling(exception -> exception
-                .accessDeniedPage("/error/403")
-            )
-            .sessionManagement(session -> session
-                .maximumSessions(1)
-                .expiredUrl("/user/login?expired=true")
-            );
+                .authorizeHttpRequests(auth -> auth
+                        // Public resources
+                        .requestMatchers("/", "/home", "/index").permitAll()
+                        .requestMatchers("/user/login", "/user/signup", "/user/register").permitAll()
+                        .requestMatchers("/user/forgot-password", "/user/reset-password").permitAll()
+                        .requestMatchers("/user/verify-email").permitAll()
+                        .requestMatchers("/css/**", "/js/**", "/images/**", "/fonts/**").permitAll()
+                        .requestMatchers("/error").permitAll()
+
+                        // Require login redirect
+                        .requestMatchers("/require-login").permitAll()
+
+                        // Protected resources
+                        .requestMatchers("/dashboard/**", "/profile/**").authenticated()
+                        .requestMatchers("/test/**").authenticated()
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
+
+                        // All other requests require authentication
+                        .anyRequest().authenticated())
+                .formLogin(form -> form
+                        .loginPage("/user/login")
+                        .loginProcessingUrl("/user/login")
+                        .defaultSuccessUrl("/", false)
+                        .failureUrl("/user/login?error=true")
+                        .usernameParameter("email")
+                        .passwordParameter("password")
+                        .permitAll())
+                .logout(logout -> logout
+                        .logoutUrl("/user/logout")
+                        .logoutSuccessUrl("/user/login?logout=true")
+                        .invalidateHttpSession(true)
+                        .deleteCookies("JSESSIONID")
+                        .permitAll())
+                .rememberMe(remember -> remember
+                        .key("uniqueAndSecret")
+                        .tokenValiditySeconds(86400) // 24 hours
+                        .userDetailsService(userDetailsService))
+                .exceptionHandling(exception -> exception
+                        .accessDeniedPage("/error/403"))
+                .sessionManagement(session -> session
+                        .maximumSessions(1)
+                        .expiredUrl("/user/login?expired=true"));
 
         return http.build();
     }

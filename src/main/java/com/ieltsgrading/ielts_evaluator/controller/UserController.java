@@ -9,14 +9,13 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
 import jakarta.servlet.http.HttpSession;
 import java.util.*;
 
 /**
- * User Controller - Complete Implementation
- * Handles user authentication, registration, and profile management
- * 
+ * User Controller - Profile Management Only
+ * Handles user profile management, avatar upload, and account settings
+ *
  * @author ATI Team
  * @version 1.0
  */
@@ -32,184 +31,8 @@ public class UserController {
     private static final String SESSION_USER_ID = "userId";
 
     /**
-     * Display login page
-     * 
-     * @param error Error parameter from failed login
-     * @param logout Logout success parameter
-     * @param signup Signup success parameter
-     * @param model Spring Model
-     * @param session HTTP Session
-     * @return login.html
-     */
-    @GetMapping("/login")
-    public String login(
-            @RequestParam(required = false) String error,
-            @RequestParam(required = false) String logout,
-            @RequestParam(required = false) String signup,
-            Model model,
-            HttpSession session) {
-        
-        // Check if user is already logged in
-        if (session.getAttribute(SESSION_USER) != null) {
-            return "redirect:/dashboard";
-        }
-
-        model.addAttribute("pageTitle", "Sign In");
-        
-        if (error != null) {
-            model.addAttribute("error", "Invalid email or password");
-        }
-        
-        if (logout != null) {
-            model.addAttribute("message", "You have been logged out successfully");
-        }
-        
-        if (signup != null) {
-            model.addAttribute("message", "Registration successful! Please log in.");
-        }
-        
-        return "login";
-    }
-
-    /**
-     * Process login
-     * 
-     * @param email User email
-     * @param password User password
-     * @param rememberMe Remember me checkbox
-     * @param session HTTP Session
-     * @param model Spring Model
-     * @return Redirect to dashboard or login with error
-     */
-    @PostMapping("/login")
-    public String processLogin(
-            @RequestParam String email,
-            @RequestParam String password,
-            @RequestParam(required = false) String rememberMe,
-            HttpSession session,
-            Model model) {
-        
-        try {
-            // Authenticate user
-            User user = userService.authenticateUser(email, password);
-            
-            // Store user in session
-            session.setAttribute(SESSION_USER, user);
-            session.setAttribute(SESSION_USER_ID, user.getId());
-            session.setAttribute("userName", user.getName());
-            session.setAttribute("userEmail", user.getEmail());
-            
-            // Set session timeout
-            if ("on".equals(rememberMe)) {
-                session.setMaxInactiveInterval(30 * 24 * 60 * 60); // 30 days
-            } else {
-                session.setMaxInactiveInterval(60 * 60); // 1 hour
-            }
-            
-            System.out.println("User logged in: " + email);
-            
-            // Redirect to dashboard
-            return "redirect:/dashboard";
-            
-        } catch (IllegalArgumentException e) {
-            model.addAttribute("error", e.getMessage());
-            model.addAttribute("email", email);
-            return "login";
-        } catch (Exception e) {
-            model.addAttribute("error", "An error occurred during login. Please try again.");
-            System.err.println("Login error: " + e.getMessage());
-            e.printStackTrace();
-            return "login";
-        }
-    }
-
-    /**
-     * Display registration page
-     * 
-     * @param model Spring Model
-     * @param session HTTP Session
-     * @return register.html
-     */
-    @GetMapping("/register")
-    public String register(Model model, HttpSession session) {
-        // Check if user is already logged in
-        if (session.getAttribute(SESSION_USER) != null) {
-            return "redirect:/dashboard";
-        }
-        
-        model.addAttribute("pageTitle", "Sign Up");
-        model.addAttribute("user", new User());
-        return "register";
-    }
-
-    /**
-     * Process registration
-     * 
-     * @param name User name
-     * @param email User email
-     * @param password User password
-     * @param confirmPassword Password confirmation
-     * @param model Spring Model
-     * @return Redirect to login or register with error
-     */
-    @PostMapping("/register")
-    public String processRegistration(
-            @RequestParam String name,
-            @RequestParam String email,
-            @RequestParam String password,
-            @RequestParam String confirmPassword,
-            Model model) {
-        
-        try {
-            // Validate password confirmation
-            if (!password.equals(confirmPassword)) {
-                throw new IllegalArgumentException("Passwords do not match");
-            }
-            
-            // Register user using UserService method
-            userService.registerUser(name, email, password);
-            
-            System.out.println("New user registered: " + email);
-            
-            // Redirect to login with success message
-            return "redirect:/user/login?signup=success";
-            
-        } catch (IllegalArgumentException e) {
-            model.addAttribute("error", e.getMessage());
-            model.addAttribute("name", name);
-            model.addAttribute("email", email);
-            return "register";
-        } catch (Exception e) {
-            model.addAttribute("error", "An error occurred during registration. Please try again.");
-            System.err.println("Registration error: " + e.getMessage());
-            e.printStackTrace();
-            model.addAttribute("name", name);
-            model.addAttribute("email", email);
-            return "register";
-        }
-    }
-
-    /**
-     * Process logout
-     * 
-     * @param session HTTP Session
-     * @return Redirect to login page
-     */
-    @GetMapping("/logout")
-    public String logout(HttpSession session) {
-        String userEmail = (String) session.getAttribute("userEmail");
-        
-        // Invalidate session
-        session.invalidate();
-        
-        System.out.println("User logged out: " + userEmail);
-        
-        return "redirect:/user/login?logout=success";
-    }
-
-    /**
      * Display user profile page
-     * 
+     *
      * @param model Spring Model
      * @param session HTTP Session
      * @return profile.html
@@ -242,7 +65,7 @@ public class UserController {
 
     /**
      * Update user profile
-     * 
+     *
      * @param name User name
      * @param phone User phone
      * @param country User country
@@ -269,10 +92,10 @@ public class UserController {
         try {
             // Update user profile using UserService method
             User updatedUser = userService.updateProfile(
-                user.getId(), 
-                name, 
-                phone, 
-                country, 
+                user.getId(),
+                name,
+                phone,
+                country,
                 targetScore
             );
             
@@ -301,7 +124,7 @@ public class UserController {
 
     /**
      * Change password
-     * 
+     *
      * @param currentPassword Current password
      * @param newPassword New password
      * @param confirmPassword Confirm new password
@@ -357,7 +180,7 @@ public class UserController {
 
     /**
      * Upload avatar/profile picture
-     * 
+     *
      * @param file Avatar file
      * @param session HTTP Session
      * @return ResponseEntity with result
@@ -423,7 +246,7 @@ public class UserController {
 
     /**
      * Deactivate user account
-     * 
+     *
      * @param password User password for confirmation
      * @param session HTTP Session
      * @param model Spring Model
@@ -469,7 +292,7 @@ public class UserController {
 
     /**
      * Delete user account permanently
-     * 
+     *
      * @param password User password for confirmation
      * @param session HTTP Session
      * @param model Spring Model
@@ -514,143 +337,8 @@ public class UserController {
     }
 
     /**
-     * Request password reset
-     * 
-     * @param email User email
-     * @param model Spring Model
-     * @return forgot-password.html with message
-     */
-    @GetMapping("/forgot-password")
-    public String forgotPassword(Model model) {
-        model.addAttribute("pageTitle", "Forgot Password");
-        return "forgot-password";
-    }
-
-    /**
-     * Process password reset request
-     * 
-     * @param email User email
-     * @param model Spring Model
-     * @return forgot-password.html with message
-     */
-    @PostMapping("/forgot-password")
-    public String processForgotPassword(
-            @RequestParam String email,
-            Model model) {
-        
-        try {
-            // Request password reset using UserService method
-            String resetToken = userService.requestPasswordReset(email);
-            
-            model.addAttribute("success", "Password reset instructions have been sent to your email");
-            model.addAttribute("resetToken", resetToken); // For testing purposes only
-            
-            System.out.println("Password reset requested for: " + email);
-            
-            return "forgot-password";
-            
-        } catch (NoSuchElementException e) {
-            model.addAttribute("error", "No account found with that email address");
-            model.addAttribute("email", email);
-            return "forgot-password";
-        } catch (Exception e) {
-            model.addAttribute("error", "An error occurred. Please try again.");
-            System.err.println("Forgot password error: " + e.getMessage());
-            return "forgot-password";
-        }
-    }
-
-    /**
-     * Display reset password page
-     * 
-     * @param token Reset token
-     * @param model Spring Model
-     * @return reset-password.html
-     */
-    @GetMapping("/reset-password")
-    public String resetPassword(
-            @RequestParam String token,
-            Model model) {
-        
-        model.addAttribute("pageTitle", "Reset Password");
-        model.addAttribute("token", token);
-        return "reset-password";
-    }
-
-    /**
-     * Process password reset
-     * 
-     * @param token Reset token
-     * @param newPassword New password
-     * @param confirmPassword Confirm password
-     * @param model Spring Model
-     * @return reset-password.html or redirect to login
-     */
-    @PostMapping("/reset-password")
-    public String processResetPassword(
-            @RequestParam String token,
-            @RequestParam String newPassword,
-            @RequestParam String confirmPassword,
-            Model model) {
-        
-        try {
-            // Validate password confirmation
-            if (!newPassword.equals(confirmPassword)) {
-                throw new IllegalArgumentException("Passwords do not match");
-            }
-            
-            // Reset password using UserService method
-            userService.resetPasswordWithToken(token, newPassword);
-            
-            System.out.println("Password reset successfully");
-            
-            return "redirect:/user/login?reset=success";
-            
-        } catch (IllegalArgumentException e) {
-            model.addAttribute("error", e.getMessage());
-            model.addAttribute("token", token);
-            return "reset-password";
-        } catch (Exception e) {
-            model.addAttribute("error", "An error occurred. Please try again.");
-            model.addAttribute("token", token);
-            System.err.println("Reset password error: " + e.getMessage());
-            return "reset-password";
-        }
-    }
-
-    /**
-     * Verify email
-     * 
-     * @param token Verification token
-     * @param model Spring Model
-     * @return Redirect to login with message
-     */
-    @GetMapping("/verify-email")
-    public String verifyEmail(
-            @RequestParam String token,
-            Model model) {
-        
-        try {
-            // Verify email using UserService method
-            userService.verifyEmail(token);
-            
-            System.out.println("Email verified successfully");
-            
-            return "redirect:/user/login?verified=success";
-            
-        } catch (IllegalArgumentException e) {
-            model.addAttribute("error", "Invalid verification token");
-            return "redirect:/user/login?verified=error";
-        } catch (Exception e) {
-            model.addAttribute("error", "An error occurred during email verification");
-            System.err.println("Email verification error: " + e.getMessage());
-            return "redirect:/user/login?verified=error";
-        }
-    }
-
-    /**
      * Get current user info (AJAX)
-     * 
+     *
      * @param session HTTP Session
      * @return ResponseEntity with user info
      */
@@ -681,7 +369,7 @@ public class UserController {
 
     /**
      * Get user statistics (AJAX)
-     * 
+     *
      * @param session HTTP Session
      * @return ResponseEntity with statistics
      */

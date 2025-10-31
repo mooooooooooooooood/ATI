@@ -1,0 +1,153 @@
+/* ===================================
+   FOOTER STYLES - Independent
+   =================================== */
+
+footer {
+    background: #690000;
+    color: #ffffff;
+    padding: 60px 0 30px;
+    margin-top: 80px;
+}
+
+.footer-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: grid;
+    grid-template-columns: 2fr 2fr 1fr 2fr;
+    gap: 40px;
+    align-items: start;
+}
+
+/* Footer Left - Logo & Description */
+.footer-left {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.footer-left img {
+    width: 250px;
+    height: 60px;
+    margin-bottom: 10px;
+}
+
+.footer-left p {
+    font-size: 16px;
+    color: #cbd5e0;
+    line-height: 1.6;
+    margin: 0;
+}
+
+/* Footer Center - Contact Info */
+.footer-center {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.footer-center p {
+    font-size: 15px;
+    color: #e2e8f0;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.footer-center p strong {
+    color: #ffffff;
+    font-weight: 600;
+}
+
+/* Footer Right - Social Media */
+.footer-right {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.footer-social {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.social-icon {
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.social-icon:hover {
+    background: #e53e3e;
+    transform: translateY(-3px);
+}
+
+.social-icon svg {
+    width: 20px;
+    height: 20px;
+    fill: #ffffff;
+}
+
+/* Footer Copyright */
+.footer-copyright {
+    text-align: center;
+    margin-top: 40px;
+    padding-top: 30px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.footer-copyright p {
+    font-size: 14px;
+    color: #cbd5e0;
+    margin: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 992px) {
+    .footer-container {
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+    }
+}
+
+@media (max-width: 768px) {
+    footer {
+        padding: 40px 0 20px;
+        margin-top: 60px;
+    }
+
+    .footer-container {
+        grid-template-columns: 1fr;
+        gap: 30px;
+        text-align: center;
+    }
+
+    .footer-left {
+        align-items: center;
+    }
+
+    .footer-left img {
+        margin: 0 auto 10px;
+    }
+
+    .footer-center p {
+        justify-content: center;
+    }
+
+    .footer-social {
+        justify-content: center;
+    }
+
+    .footer-copyright {
+        margin-top: 30px;
+        padding-top: 20px;
+    }
+}
