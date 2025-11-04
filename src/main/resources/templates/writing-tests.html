@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,12 +12,11 @@
 <body>
     <!-- Header -->
     <header th:replace="~{fragments/header :: header}"></header>
-
+    
     <!-- Main Content -->
     <main class="test-collection-page">
         <div class="container">
             <h1 class="page-title">Writing test collection</h1>
-
             <div class="content-wrapper">
                 <!-- Sidebar -->
                 <aside class="sidebar">
@@ -28,7 +27,6 @@
                             <button>🔍</button>
                         </div>
                     </div>
-
                     <div class="filter-section">
                         <h3>Sort</h3>
                         <label class="radio-option">
@@ -45,13 +43,13 @@
                         </label>
                     </div>
                 </aside>
-
+                
                 <!-- Test Grid -->
                 <section class="test-grid" id="writingTestGrid">
                     <!-- Tests will be loaded dynamically -->
                 </section>
             </div>
-
+            
             <!-- Pagination -->
             <div class="pagination">
                 <button class="page-btn">‹</button>
@@ -66,9 +64,10 @@
             </div>
         </div>
     </main>
-
+    
     <!-- Footer -->
     <footer th:replace="~{fragments/footer :: footer}"></footer>
+    
     <script src="/js/main.js"></script>
     <script src="/js/test-collection.js"></script>
     <script>
@@ -99,6 +98,15 @@
             
             return tests;
         }
+        
+        // Override startTest function for writing
+        function startTest(type, testId) {
+            console.log('Starting writing test:', testId);
+            window.location.href = `/writing/test/${testId}`;
+        }
+        
+        // Make it globally accessible
+        window.startTest = startTest;
     </script>
 </body>
 </html>
