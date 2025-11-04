@@ -1,18 +1,18 @@
-// Test Collection Page JavaScript
+// Writing Test Collection Page JavaScript
 
 // Global variables
 let currentPage = 1;
-let totalPages = 20;
+let totalPages = 1;
 let currentSort = 'newest';
 let searchQuery = '';
 let allTests = [];
 
 // Initialize test collection page
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Test Collection page initialized');
+    console.log('Writing Test Collection page initialized');
     
-    // Load tests
-    loadTests();
+    // Load tests from backend (Thymeleaf will inject data)
+    loadTestsFromBackend();
     
     // Setup event listeners
     setupSortFilters();
@@ -23,35 +23,51 @@ document.addEventListener('DOMContentLoaded', function() {
     animateTestCards();
 });
 
-// Load tests from backend
-async function loadTests() {
+// Load tests from backend data injected by Thymeleaf
+function loadTestsFromBackend() {
     try {
-        // TODO: Replace with actual API call
-        // const response = await fetch(`/api/tests?type=speaking&page=${currentPage}&sort=${currentSort}`);
-        // const data = await response.json();
+        // Check if tests data exists from Thymeleaf
+        const testGrid = document.getElementById('writingTestGrid');
         
-        // For now, generate sample data
-        allTests = generateSampleTests();
+        // If grid already has tests from server-side rendering, extract them
+        const existingCards = testGrid.querySelectorAll('.test-card');
+        if (existingCards.length > 0) {
+            console.log('Tests already rendered by server:', existingCards.length);
+            allTests = Array.from(existingCards).map(card => ({
+                id: card.getAttribute('data-test-id'),
+                title: card.querySelector('h3')?.textContent || '',
+                views: card.querySelector('.test-views')?.textContent || '0 lượt làm',
+                background: card.getAttribute('data-bg'),
+                cam: parseInt(card.getAttribute('data-cam')) || 0,
+                testNumber: parseInt(card.getAttribute('data-test-number')) || 0
+            }));
+            return;
+        }
+        
+        // Fallback: Generate sample data if no server data
+        console.log('No server data found, generating samples...');
+        allTests = generateWritingTests();
         renderTests(allTests);
         
     } catch (error) {
-        console.error('Error loading tests:',showError('Failed to load tests. Please try again.');
+        console.error('Error loading tests:', error);
+        showError('Failed to load tests. Please refresh the page.');
     }
 }
 
-// Generate sample tests data
-function generateSampleTests() {
+// Generate writing tests data
+function generateWritingTests() {
     const tests = [];
-    const cams = [20, 19, 18, 17];
-    const backgrounds = ['purple', 'beige', 'dark', 'green'];
+    const cams = [20, 19, 18, 17, 16, 15];
+    const backgrounds = ['purple', 'beige', 'dark', 'green', 'blue', 'orange'];
     
     cams.forEach((cam, index) => {
         for (let i = 4; i >= 1; i--) {
             tests.push({
                 id: `cam${cam}-test${i}`,
-                title: `CAM ${cam} - Speaking Test ${i}`,
-                views: '33K lượt làm',
-                background: backgrounds[index],
+                title: `CAM ${cam} - Writing Test ${i}`,
+                views: `${Math.floor(Math.random() * 50 + 10)}K lượt làm`,
+                background: backgrounds[index % backgrounds.length],
                 cam: cam,
                 testNumber: i
             });
@@ -63,11 +79,20 @@ function generateSampleTests() {
 
 // Render tests to grid
 function renderTests(tests) {
-    const grid = document.querySelector('.test-grid');
-    if (!grid) return;
+    const grid = document.getElementById('writingTestGrid');
+    if (!grid) {
+        console.error('Test grid not found!');
+        return;
+    }
     
     // Clear existing content
     grid.innerHTML = '';
+    
+    // Show message if no tests
+    if (tests.length === 0) {
+        showNoResults();
+        return;
+    }
     
     // Render each test card
     tests.forEach((test, index) => {
@@ -75,6 +100,8 @@ function renderTests(tests) {
         card.style.animationDelay = `${index * 0.05}s`;
         grid.appendChild(card);
     });
+    
+    console.log(`Rendered ${tests.length} writing tests`);
 }
 
 // Create test card element
@@ -83,15 +110,18 @@ function createTestCard(test) {
     card.className = 'test-card';
     card.setAttribute('data-bg', test.background);
     card.setAttribute('data-test-id', test.id);
+    card.setAttribute('data-cam', test.cam);
+    card.setAttribute('data-test-number', test.testNumber);
     
     card.innerHTML = `
         <div class="test-thumbnail">
-            <img src="/images/cam${test.cam}-cover.png" alt="CAM ${test.cam}">
+            <img src="/images/writing.png" alt="${test.title}" 
+                 onerror="this.src='/images/Logo.png'">
         </div>
         <h3>${test.title}</h3>
         <p class="test-views">${test.views}</p>
-        <button class="btn-do-test" onclick="startTest('speaking', '${test.id}')">
-            <span class="icon">▶</span> Do the test
+        <button class="btn-do-test" onclick="startWritingTest('${test.id}')">
+            <span class="icon">✍️</span> Do the test
             <span class="dropdown">▼</span>
         </button>
     `;
@@ -99,22 +129,21 @@ function createTestCard(test) {
     return card;
 }
 
-// Start test function
-function startTest(type, testId) {
-    console.log(`Starting ${type} test:`, testId);
-    
-    // Track test start
-    trackTestAction('start_test', { type, testId });
+// Start writing test
+function startWritingTest(testId) {
+    console.log('Starting writing test:', testId);
     
     // Show loading
-    if (window.IELTSApp) {
-        window.IELTSApp.showLoading();
+    const btn = event.target.closest('button');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="icon">⏳</span> Loading...';
     }
     
-    // Navigate to test page
+    // Navigate to writing test page
     setTimeout(() => {
-        window.location.href = `/test/${type}/${testId}`;
-    }, 500);
+        window.location.href = `/writing/test/${testId}`;
+    }, 300);
 }
 
 // Setup sort filters
@@ -126,7 +155,7 @@ function setupSortFilters() {
             if (this.checked) {
                 currentSort = this.value;
                 sortTests(currentSort);
-                trackTestAction('sort_change', { sort: currentSort });
+                console.log('Sorting by:', currentSort);
             }
         });
     });
@@ -138,16 +167,21 @@ function sortTests(sortBy) {
     
     switch(sortBy) {
         case 'newest':
-            sortedTests.sort((a, b) => b.cam - a.cam || b.testNumber - a.testNumber);
+            sortedTests.sort((a, b) => {
+                if (b.cam !== a.cam) return b.cam - a.cam;
+                return b.testNumber - a.testNumber;
+            });
             break;
         case 'oldest':
-            sortedTests.sort((a, b) => a.cam - b.cam || a.testNumber - b.testNumber);
+            sortedTests.sort((a, b) => {
+                if (a.cam !== b.cam) return a.cam - b.cam;
+                return a.testNumber - b.testNumber;
+            });
             break;
         case 'most-attempted':
-            // Sort by views (in real app, this would be from backend)
             sortedTests.sort((a, b) => {
-                const viewsA = parseInt(a.views.replace('K', '')) * 1000;
-                const viewsB = parseInt(b.views.replace('K', '')) * 1000;
+                const viewsA = parseInt(a.views.replace(/[^\d]/g, '')) || 0;
+                const viewsB = parseInt(b.views.replace(/[^\d]/g, '')) || 0;
                 return viewsB - viewsA;
             });
             break;
@@ -159,16 +193,11 @@ function sortTests(sortBy) {
 
 // Setup search functionality
 function setupSearch() {
-    const searchInputs = [
-        document.getElementById('searchInput'),
-        document.getElementById('sidebarSearch')
-    ];
+    const searchInput = document.getElementById('sidebarSearch');
     
-    searchInputs.forEach(input => {
-        if (!input) return;
-        
+    if (searchInput) {
         let searchTimeout;
-        input.addEventListener('input', function() {
+        searchInput.addEventListener('input', function() {
             clearTimeout(searchTimeout);
             const query = this.value.trim().toLowerCase();
             
@@ -177,9 +206,9 @@ function setupSearch() {
                 filterTests(query);
             }, 300);
         });
-    });
+    }
     
-    // Search button in sidebar
+    // Search button
     const searchBtn = document.querySelector('.search-box-sidebar button');
     if (searchBtn) {
         searchBtn.addEventListener('click', function() {
@@ -201,30 +230,26 @@ function filterTests(query) {
     
     const filteredTests = allTests.filter(test => {
         return test.title.toLowerCase().includes(query) ||
-               test.id.toLowerCase().includes(query);
+               test.id.toLowerCase().includes(query) ||
+               `cam${test.cam}`.includes(query) ||
+               `test${test.testNumber}`.includes(query);
     });
     
     renderTests(filteredTests);
     animateTestCards();
     
-    // Track search
-    trackTestAction('search', { query: query, results: filteredTests.length });
-    
-    // Show message if no results
-    if (filteredTests.length === 0) {
-        showNoResults();
-    }
+    console.log(`Search "${query}": found ${filteredTests.length} results`);
 }
 
 // Show no results message
 function showNoResults() {
-    const grid = document.querySelector('.test-grid');
+    const grid = document.getElementById('writingTestGrid');
     if (!grid) return;
     
     grid.innerHTML = `
         <div style="grid-column: 1 / -1; text-align: center; padding: 60px 20px;">
             <h3 style="font-size: 24px; color: #666; margin-bottom: 10px;">
-                No tests found
+                📝 No writing tests found
             </h3>
             <p style="color: #999;">
                 Try adjusting your search or filters
@@ -254,7 +279,9 @@ function setupPagination() {
 
 // Go to specific page
 function goToPage(pageNumber) {
-    if (pageNumber === currentPage) return;
+    if (pageNumber === currentPage || pageNumber < 1 || pageNumber > totalPages) {
+        return;
+    }
     
     currentPage = pageNumber;
     
@@ -272,14 +299,10 @@ function goToPage(pageNumber) {
         behavior: 'smooth'
     });
     
-    // Load new page data
-    loadTests();
-    
-    // Track pagination
-    trackTestAction('pagination', { page: pageNumber });
+    console.log('Navigated to page:', pageNumber);
 }
 
-// Animate test cards on load/filter
+// Animate test cards
 function animateTestCards() {
     const cards = document.querySelectorAll('.test-card');
     
@@ -293,13 +316,6 @@ function animateTestCards() {
             card.style.transform = 'translateY(0)';
         }, index * 50);
     });
-}
-
-// Track test-related actions
-function trackTestAction(action, data) {
-    console.log('Test Action:', action, data);
-    // TODO: Implement actual tracking
-    // analytics.track(action, data);
 }
 
 // Show error message
@@ -317,13 +333,13 @@ function showError(message) {
         border-radius: 8px;
         box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         z-index: 10000;
-        animation: slideInRight 0.3s ease;
+        animation: slideIn 0.3s ease;
     `;
     
     document.body.appendChild(errorDiv);
     
     setTimeout(() => {
-        errorDiv.style.animation = 'slideOutRight 0.3s ease';
+        errorDiv.style.opacity = '0';
         setTimeout(() => errorDiv.remove(), 300);
     }, 3000);
 }
@@ -334,7 +350,7 @@ document.addEventListener('mouseover', function(e) {
     if (card) {
         const thumbnail = card.querySelector('.test-thumbnail img');
         if (thumbnail) {
-            thumbnail.style.transform = 'scale(1.1) rotate(2deg)';
+            thumbnail.style.transform = 'scale(1.1)';
         }
     }
 });
@@ -344,68 +360,14 @@ document.addEventListener('mouseout', function(e) {
     if (card) {
         const thumbnail = card.querySelector('.test-thumbnail img');
         if (thumbnail) {
-            thumbnail.style.transform = 'scale(1) rotate(0deg)';
+            thumbnail.style.transform = 'scale(1)';
         }
     }
 });
 
-// Lazy load images
-function lazyLoadImages() {
-    const images = document.querySelectorAll('.test-thumbnail img');
-    
-    const imageObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const img = entry.target;
-                img.src = img.getAttribute('src');
-                img.classList.add('loaded');
-                imageObserver.unobserve(img);
-            }
-        });
-    });
-    
-    images.forEach(img => imageObserver.observe(img));
-}
+// Export for global use
+window.startWritingTest = startWritingTest;
+window.renderTests = renderTests;
+window.generateWritingTests = generateWritingTests;
 
-// Call lazy load on page load
-setTimeout(lazyLoadImages, 500);
-
-// Export functions for global use
-window.startTest = startTest;// Test Collection Page JavaScript
-
-// Global variables
-let currentPage = 1;
-let totalPages = 20;
-let currentSort = 'newest';
-let searchQuery = '';
-let allTests = [];
-
-// Initialize test collection page
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Test Collection page initialized');
-    
-    // Load tests
-    loadTests();
-    
-    // Setup event listeners
-    setupSortFilters();
-    setupSearch();
-    setupPagination();
-    
-    // Animate test cards on load
-    animateTestCards();
-});
-
-// Load tests from backend
-async function loadTests() {
-    try {
-        // TODO: Replace with actual API call
-        // const response = await fetch(`/api/tests?type=speaking&page=${currentPage}&sort=${currentSort}`);
-        // const data = await response.json();
-        
-        // For now, generate sample data
-        allTests = generateSampleTests();
-        renderTests(allTests);
-        
-    } catch (error) {
-        console.error('Error loading tests:',
+console.log('✅ Writing test collection script loaded successfully');

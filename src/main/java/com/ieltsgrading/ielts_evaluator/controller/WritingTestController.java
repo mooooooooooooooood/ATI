@@ -1,7 +1,10 @@
 package com.ieltsgrading.ielts_evaluator.controller;
 
+import com.ieltsgrading.ielts_evaluator.model.IeltsWritingTest;
+import com.ieltsgrading.ielts_evaluator.repository.IeltsWritingTestRepository;
 import com.ieltsgrading.ielts_evaluator.service.WritingApiService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -12,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 import jakarta.servlet.http.HttpSession;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/writing")
@@ -20,12 +24,15 @@ public class WritingTestController {
     @Autowired
     private WritingApiService writingApiService;
     
+    @Autowired
+    private IeltsWritingTestRepository writingTestRepository;
+    
     private static final int PAGE_SIZE = 16;
     private static final int MIN_TASK1_WORDS = 150;
     private static final int MIN_TASK2_WORDS = 250;
     
     /**
-     * Display list of writing tests
+     * Display list of writing tests with filtering and pagination
      */
     @GetMapping("/tests")
     public String writingTests(
@@ -37,25 +44,33 @@ public class WritingTestController {
         try {
             if (page < 1) page = 1;
             
-            List<Map<String, Object>> tests = generateMockTests();
+            // Get tests from database
+            List<IeltsWritingTest> tests;
             
             if (search != null && !search.trim().isEmpty()) {
-                String searchLower = search.toLowerCase();
-                tests = tests.stream()
-                    .filter(test -> test.get("title").toString().toLowerCase().contains(searchLower))
-                    .toList();
+                tests = writingTestRepository.searchByKeyword(search.trim());
+            } else {
+                tests = writingTestRepository.findAll();
             }
             
-            tests = sortTests(tests, sort);
+            // Convert to Map for easier template rendering
+            List<Map<String, Object>> testMaps = tests.stream()
+                .map(this::convertTestToMap)
+                .collect(Collectors.toList());
             
-            int totalTests = tests.size();
+            // Apply sorting
+            testMaps = sortTests(testMaps, sort);
+            
+            // Calculate pagination
+            int totalTests = testMaps.size();
             int totalPages = (int) Math.ceil((double) totalTests / PAGE_SIZE);
             int startIndex = (page - 1) * PAGE_SIZE;
             int endIndex = Math.min(startIndex + PAGE_SIZE, totalTests);
             
             List<Map<String, Object>> pagedTests = startIndex < totalTests ?
-                tests.subList(startIndex, endIndex) : Collections.emptyList();
+                testMaps.subList(startIndex, endIndex) : Collections.emptyList();
             
+            // Add attributes to model
             model.addAttribute("pageTitle", "Writing Test Collection");
             model.addAttribute("testType", "writing");
             model.addAttribute("tests", pagedTests);
@@ -72,6 +87,8 @@ public class WritingTestController {
             return "writing-tests";
             
         } catch (Exception e) {
+            System.err.println("Error loading tests: " + e.getMessage());
+            e.printStackTrace();
             model.addAttribute("error", "Failed to load tests: " + e.getMessage());
             return "error";
         }
@@ -87,33 +104,49 @@ public class WritingTestController {
             HttpSession session) {
         
         try {
-            String[] parts = testId.split("-");
-            String camNumber = parts.length > 0 ? parts[0].replace("cam", "") : "";
-            String testNumber = parts.length > 1 ? parts[1].replace("test", "") : "";
+            // Find test from database by display ID (e.g., "cam20-test4")
+            Optional<IeltsWritingTest> testOpt = writingTestRepository.findByDisplayId(testId);
             
+            if (testOpt.isEmpty()) {
+                model.addAttribute("error", "Test not found: " + testId);
+                return "error-404";
+            }
+            
+            IeltsWritingTest test = testOpt.get();
+            
+            // Track test view
             trackTestView(testId, session);
-            Map<String, String> testQuestions = getTestQuestions(testId);
             
+            // Load saved draft if exists
             String task1Draft = loadDraft(session, testId, "task1");
             String task2Draft = loadDraft(session, testId, "task2");
             
-            model.addAttribute("pageTitle", "Writing Test - CAM " + camNumber + " Test " + testNumber);
+            // Add attributes to model
+            model.addAttribute("pageTitle", "Writing Test - CAM " + test.getCamNumber() + " Test " + test.getTestNumber());
             model.addAttribute("testId", testId);
-            model.addAttribute("camNumber", camNumber);
-            model.addAttribute("testNumber", testNumber);
-            model.addAttribute("task1Type", testQuestions.get("task1Type"));
-            model.addAttribute("task1Question", testQuestions.get("task1Question"));
-            model.addAttribute("task1ImageUrl", testQuestions.get("task1ImageUrl"));
-            model.addAttribute("task2Question", testQuestions.get("task2Question"));
+            model.addAttribute("camNumber", test.getCamNumber());
+            model.addAttribute("testNumber", test.getTestNumber());
+            
+            // Add test questions
+            model.addAttribute("task1Type", test.getTask1Type());
+            model.addAttribute("task1Question", test.getTask1Question());
+            model.addAttribute("task1ImageUrl", test.getDirectImageUrl());
+            model.addAttribute("task2Question", test.getTask2Question());
+            
+            // Add drafts
             model.addAttribute("task1Draft", task1Draft);
             model.addAttribute("task2Draft", task2Draft);
+            
+            // Add word count requirements
             model.addAttribute("task1MinWords", MIN_TASK1_WORDS);
             model.addAttribute("task2MinWords", MIN_TASK2_WORDS);
-            model.addAttribute("totalDuration", 60);
+            model.addAttribute("totalDuration", 60); // 60 minutes
             
             return "writing-test-page";
             
         } catch (Exception e) {
+            System.err.println("Error loading test: " + e.getMessage());
+            e.printStackTrace();
             model.addAttribute("error", "Error loading test: " + e.getMessage());
             return "error";
         }
@@ -126,17 +159,25 @@ public class WritingTestController {
     @ResponseBody
     public ResponseEntity<Map<String, Object>> submitWritingTest(
             @PathVariable String testId,
-            @RequestParam String task1Question,
             @RequestParam String task1Answer,
-            @RequestParam String task2Question,
             @RequestParam String task2Answer,
-            @RequestParam(required = false) String task1ImageUrl,
             @RequestParam(required = false, defaultValue = "0") int timeSpent,
             HttpSession session) {
         
         Map<String, Object> response = new HashMap<>();
         
         try {
+            // Find test from database
+            Optional<IeltsWritingTest> testOpt = writingTestRepository.findByDisplayId(testId);
+            
+            if (testOpt.isEmpty()) {
+                response.put("status", "error");
+                response.put("message", "Test not found");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            IeltsWritingTest test = testOpt.get();
+            
             // Validate answers
             List<String> errors = new ArrayList<>();
             int task1Words = countWords(task1Answer);
@@ -158,20 +199,21 @@ public class WritingTestController {
             
             // Call external API through service
             Map<String, Object> apiResults = writingApiService.submitCompleteTest(
-                task1Question,
+                test.getTask1Question(),
                 task1Answer,
-                task2Question,
+                test.getTask2Question(),
                 task2Answer,
-                task1ImageUrl
+                test.getDirectImageUrl()
             );
             
-            // Generate submission ID
+            // Generate unique submission ID
             String submissionId = UUID.randomUUID().toString();
             
             // Store submission with API results
             Map<String, Object> submission = new HashMap<>();
             submission.put("testId", testId);
             submission.put("submissionId", submissionId);
+            submission.put("test", test);
             submission.put("task1Answer", task1Answer);
             submission.put("task2Answer", task2Answer);
             submission.put("task1Words", task1Words);
@@ -182,7 +224,7 @@ public class WritingTestController {
             
             session.setAttribute("writing_submission_" + submissionId, submission);
             
-            // Clear drafts
+            // Clear drafts after submission
             clearDraft(session, testId, "task1");
             clearDraft(session, testId, "task2");
             
@@ -213,16 +255,25 @@ public class WritingTestController {
     @ResponseBody
     public ResponseEntity<Map<String, Object>> submitWithFile(
             @PathVariable String testId,
-            @RequestParam String task1Question,
             @RequestParam String task1Answer,
             @RequestParam MultipartFile task1Image,
-            @RequestParam String task2Question,
             @RequestParam String task2Answer,
             HttpSession session) {
         
         Map<String, Object> response = new HashMap<>();
         
         try {
+            // Find test from database
+            Optional<IeltsWritingTest> testOpt = writingTestRepository.findByDisplayId(testId);
+            
+            if (testOpt.isEmpty()) {
+                response.put("status", "error");
+                response.put("message", "Test not found");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            IeltsWritingTest test = testOpt.get();
+            
             // Validate
             int task1Words = countWords(task1Answer);
             int task2Words = countWords(task2Answer);
@@ -235,14 +286,14 @@ public class WritingTestController {
             
             // Submit Task 1 with file
             Map<String, Object> task1Result = writingApiService.submitTask1WithFile(
-                task1Question,
+                test.getTask1Question(),
                 task1Answer,
                 task1Image
             );
             
             // Submit Task 2
             Map<String, Object> task2Result = writingApiService.submitTask2(
-                task2Question,
+                test.getTask2Question(),
                 task2Answer
             );
             
@@ -325,6 +376,43 @@ public class WritingTestController {
     
     // ==================== Helper Methods ====================
     
+    /**
+     * Convert IeltsWritingTest entity to Map for template
+     */
+    private Map<String, Object> convertTestToMap(IeltsWritingTest test) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("id", test.getDisplayId());
+        map.put("title", "CAM " + test.getCamNumber() + " - Writing Test " + test.getTestNumber());
+        map.put("views", (int)(Math.random() * 20000 + 10000)); // Mock views
+        map.put("background", test.getBackgroundColor());
+        map.put("cam", test.getCamNumber());
+        map.put("testNumber", test.getTestNumber());
+        map.put("createdAt", LocalDateTime.now().minusDays(test.getTestId())); // Mock date
+        map.put("testId", test.getTestId());
+        return map;
+    }
+    
+    /**
+     * Sort tests based on criteria
+     */
+    private List<Map<String, Object>> sortTests(List<Map<String, Object>> tests, String sort) {
+        List<Map<String, Object>> sortedTests = new ArrayList<>(tests);
+        
+        switch (sort) {
+            case "oldest":
+                sortedTests.sort(Comparator.comparing(t -> (LocalDateTime) t.get("createdAt")));
+                break;
+            case "most-attempted":
+                sortedTests.sort(Comparator.comparing((Map<String, Object> t) -> (Integer) t.get("views")).reversed());
+                break;
+            default: // newest
+                sortedTests.sort(Comparator.comparing((Map<String, Object> t) -> (LocalDateTime) t.get("createdAt")).reversed());
+                break;
+        }
+        
+        return sortedTests;
+    }
+    
     private int countWords(String text) {
         if (text == null || text.trim().isEmpty()) {
             return 0;
@@ -351,56 +439,5 @@ public class WritingTestController {
         String draftKey = "draft_" + testId + "_" + task;
         session.removeAttribute(draftKey);
         session.removeAttribute(draftKey + "_timestamp");
-    }
-    
-    private Map<String, String> getTestQuestions(String testId) {
-        Map<String, String> questions = new HashMap<>();
-        questions.put("task1Type", "Graph/Chart");
-        questions.put("task1Question",
-            "The chart below shows the percentage of households in owned and rented accommodation in England and Wales between 1918 and 2011. " +
-            "Summarise the information by selecting and reporting the main features, and make comparisons where relevant.");
-        questions.put("task1ImageUrl", "/images/charts/" + testId + "_task1.png");
-        questions.put("task2Question",
-            "Some people believe that it is best to accept a bad situation, such as an unsatisfactory job or shortage of money. " +
-            "Others argue that it is better to try and improve such situations. " +
-            "Discuss both these views and give your own opinion.");
-        return questions;
-    }
-    
-    private List<Map<String, Object>> generateMockTests() {
-        List<Map<String, Object>> tests = new ArrayList<>();
-        int[] cams = {20, 19, 18, 17, 16};
-        String[] backgrounds = {"purple", "beige", "dark", "green", "blue"};
-        
-        for (int i = 0; i < cams.length; i++) {
-            for (int j = 4; j >= 1; j--) {
-                Map<String, Object> test = new HashMap<>();
-                test.put("id", "cam" + cams[i] + "-test" + j);
-                test.put("title", "CAM " + cams[i] + " - Writing Test " + j);
-                test.put("views", (int)(Math.random() * 20000 + 10000));
-                test.put("background", backgrounds[i]);
-                test.put("cam", cams[i]);
-                test.put("testNumber", j);
-                test.put("createdAt", LocalDateTime.now().minusDays((cams.length - i) * 30L + (4 - j)));
-                tests.add(test);
-            }
-        }
-        return tests;
-    }
-    
-    private List<Map<String, Object>> sortTests(List<Map<String, Object>> tests, String sort) {
-        List<Map<String, Object>> sortedTests = new ArrayList<>(tests);
-        switch (sort) {
-            case "oldest":
-                sortedTests.sort(Comparator.comparing(t -> (LocalDateTime) t.get("createdAt")));
-                break;
-            case "most-attempted":
-                sortedTests.sort(Comparator.comparing((Map<String, Object> t) -> (Integer) t.get("views")).reversed());
-                break;
-            default:
-                sortedTests.sort(Comparator.comparing((Map<String, Object> t) -> (LocalDateTime) t.get("createdAt")).reversed());
-                break;
-        }
-        return sortedTests;
     }
 }
