@@ -96,18 +96,19 @@ public class TestController {
      * Reading tests page
      * @return reading-tests.html
      */
-    @GetMapping("/reading")
+    @GetMapping("/reading") // Path: /test/reading
     public String readingTests(Model model, HttpSession session) {
         User user = (User) session.getAttribute("loggedInUser");
-        
+
+        // This is the new, correct path handled by the dedicated controller
+        String redirectTarget = "/reading/tests";
+
         if (user == null) {
-            return "redirect:/require-login?redirect=/test/reading";
+            // Redirect unauthenticated user to log in, preserving the target path
+            return "redirect:/require-login?redirect=" + redirectTarget;
         }
-        
-        model.addAttribute("pageTitle", "Reading Tests");
-        model.addAttribute("user", user);
-        model.addAttribute("testCount", 55);
-        
-        return "reading-tests";
+
+        // FIX: Redirects the browser to the dedicated controller path /reading/tests
+        return "redirect:" + redirectTarget;
     }
 }
