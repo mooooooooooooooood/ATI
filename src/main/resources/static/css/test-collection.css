@@ -55,19 +55,21 @@
     background: #f5f5f5;
     border-radius: 8px;
     overflow: hidden;
+    padding: 0;
 }
 
 .search-box-sidebar input {
     flex: 1;
-    padding: 10px 15px;
+    padding: 10px 5px;
     border: none;
     background: transparent;
     outline: none;
     font-size: 14px;
+    border-right: none;
 }
 
 .search-box-sidebar button {
-    padding: 10px 15px;
+    padding: 6px 0px;
     background: transparent;
     border: none;
     cursor: pointer;
@@ -202,11 +204,6 @@
 
 .btn-do-test .icon {
     font-size: 16px;
-}
-
-.btn-do-test .dropdown {
-    margin-left: auto;
-    font-size: 12px;
 }
 
 /* User Profile in Header */

@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
     <title th:text="${pageTitle}">Writing Test - EO.EO</title>
     <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="/css/test-collection.css">
@@ -205,6 +207,7 @@
 
     <footer th:replace="~{fragments/footer :: footer}"></footer>
 
+    <script th:src="@{/js/header.js}" defer></script>
     <script src="/js/main.js"></script>
     <script src="/js/writing-test.js"></script>
 </body>
