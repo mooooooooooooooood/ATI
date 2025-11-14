@@ -131,75 +131,108 @@ function startTimer() {
 // Setup form submission
 function setupFormSubmission() {
     const form = document.getElementById('writingTestForm');
-    
+   
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
-        
+       
         const task1Answer = document.getElementById('task1Answer').value.trim();
         const task2Answer = document.getElementById('task2Answer').value.trim();
         const testId = document.getElementById('testId').value;
-        
+       
         // Validate
         const errors = [];
         const task1Words = task1Answer ? task1Answer.split(/\s+/).length : 0;
         const task2Words = task2Answer ? task2Answer.split(/\s+/).length : 0;
-        
+       
         if (task1Words < 150) {
             errors.push(`Task 1 requires at least 150 words (you have ${task1Words})`);
         }
-        
+       
         if (task2Words < 250) {
             errors.push(`Task 2 requires at least 250 words (you have ${task2Words})`);
         }
-        
+       
         if (errors.length > 0) {
             alert('Please fix the following errors:\n\n' + errors.join('\n'));
             return;
         }
-        
+       
         // Confirm submission
         if (!confirm('Are you sure you want to submit? You cannot change your answers after submission.')) {
             return;
         }
-        
+       
         // Show loading
         showLoading(true);
-        
+       
         try {
-            // Get task questions from page
-            const task1Question = document.querySelector('.task-section:nth-child(2) .task-question').textContent.trim();
-            const task2Question = document.querySelector('.task-section:nth-child(3) .task-question').textContent.trim();
+            // Calculate time spent
+            const timeSpent = 3600 - timeRemaining;
+           
+            // LẤY CSRF TOKEN TỪ META TAG
+            const csrfToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+            const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
             
-            // Check if Task 1 has image
-            const task1ImageElement = document.getElementById('task1Image');
-            const hasImage = task1ImageElement && task1ImageElement.src;
-            
-            let result;
-            
-            if (hasImage) {
-                // Call API with image link for Task 1
-                result = await submitWithImageLink(task1Question, task1Answer, task1ImageElement.src, task2Question, task2Answer);
-            } else {
-                // Call API without image
-                result = await submitWithoutImage(task1Question, task1Answer, task2Question, task2Answer);
+            // Submit to backend
+            const formData = new FormData();
+            formData.append('task1Answer', task1Answer);
+            formData.append('task2Answer', task2Answer);
+            formData.append('timeSpent', timeSpent);
+           
+            // THÊM CSRF TOKEN VÀO HEADERS
+            const headers = {};
+            if (csrfToken && csrfHeader) {
+                headers[csrfHeader] = csrfToken;
             }
             
-            // Clear drafts
-            localStorage.removeItem(`draft_${testId}_task1`);
-            localStorage.removeItem(`draft_${testId}_task2`);
-            
-            // Stop timer
-            clearInterval(timerInterval);
-            
-            // Show result
-            showResult(result);
-            
+            const response = await fetch(`/writing/test/${testId}/submit`, {
+                method: 'POST',
+                headers: headers,  // THÊM HEADERS VÀO ĐÂY
+                body: formData
+            });
+           
+            const result = await response.json();
+           
+            if (result.status === 'success') {
+                // Clear drafts
+                localStorage.removeItem(`draft_${testId}_task1`);
+                localStorage.removeItem(`draft_${testId}_task2`);
+               
+                // Stop timer
+                clearInterval(timerInterval);
+               
+                // Show success message and redirect
+                alert('✅ Test submitted successfully!\n\nYour test is being graded. You will be redirected to dashboard.');
+               
+                // Redirect to dashboard
+                window.location.href = result.redirect || '/dashboard';
+               
+            } else if (result.status === 'error' && result.redirect) {
+                // Need to login
+                alert('Please login to submit your test.');
+                window.location.href = result.redirect;
+            } else {
+                throw new Error(result.message || 'Submission failed');
+            }
+           
         } catch (error) {
             console.error('Submission error:', error);
-            alert('Failed to submit test: ' + error.message);
+            alert('❌ Failed to submit test: ' + error.message);
             showLoading(false);
         }
     });
+}
+
+// Check submission status (optional - for real-time updates)
+async function checkSubmissionStatus(submissionId) {
+    try {
+        const response = await fetch(`/api/submission/${submissionId}/status`);
+        const data = await response.json();
+        return data.status;
+    } catch (error) {
+        console.error('Error checking status:', error);
+        return 'unknown';
+    }
 }
 
 // Submit with image link (Task 1)
