@@ -2,9 +2,15 @@ package com.ieltsgrading.ielts_evaluator.model;
 
 import jakarta.persistence.*;
 
+import java.util.Map;
+
 @Entity
 @Table(name = "reading_question")
 public class ReadingQuestion {
+
+
+
+
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -29,8 +35,22 @@ public class ReadingQuestion {
 
     @Column(name = "question_order")
     private Integer questionOrder;
+    // Inside ReadingQuestion.java
+    @Transient // Not mapped to DB column
+    private Map<String, String> parsedOptions;
 
-    // Getters and Setters
+    public Map<String, String> getParsedOptions() {
+        return parsedOptions;
+    }
+
+    public void setParsedOptions(Map<String, String> parsedOptions) {
+        this.parsedOptions = parsedOptions;
+    }
+// Add getters/setters
+
+
+
+
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
 
@@ -51,4 +71,5 @@ public class ReadingQuestion {
 
     public Integer getQuestionOrder() { return questionOrder; }
     public void setQuestionOrder(Integer questionOrder) { this.questionOrder = questionOrder; }
+
 }
