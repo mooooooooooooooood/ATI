@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${test.testName} + ' - Test Detail'"></title>
+    <style>
+        body {
+            font-family: 'Times New Roman', Times, serif; /* Traditional reading font */
+            padding: 40px;
+            background-color: #f0f0f0; /* Light gray background */
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .test-header {
+            margin-bottom: 30px;
+            border-bottom: 3px double #007bff; /* Double line border for heading */
+            padding-bottom: 15px;
+            text-align: center;
+        }
+
+        /* === MAIN LAYOUT FOR EACH PASSAGE (CSS Grid) === */
+        .passage-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* Two columns, equal width */
+            gap: 30px; /* Increased space between columns */
+            margin-bottom: 60px;
+            padding: 25px;
+            background-color: #ffffff; /* White block for readability */
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            min-height: 80vh; /* Ensure the test block is tall */
+        }
+
+        /* === PASSAGE TEXT (LEFT COLUMN) === */
+        .passage-column {
+            padding-right: 20px;
+            border-right: 1px solid #e0e0e0; /* Clean vertical separator */
+        }
+        .passage-title {
+            color: #1e3a8a;
+            font-size: 1.8em;
+            font-weight: 700;
+            margin-top: 0;
+            margin-bottom: 20px;
+        }
+        .passage-text {
+            white-space: pre-wrap;
+            font-size: 1.05em; /* Slightly larger text for better readability */
+            line-height: 1.7;
+            color: #333;
+            text-align: justify;
+        }
+
+        /* === QUESTIONS (RIGHT COLUMN) === */
+        .questions-column {
+            padding-left: 20px;
+        }
+        .questions-column h2 {
+            color: #1e3a8a;
+            font-size: 1.4em;
+            margin-top: 0;
+            margin-bottom: 20px;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        /* === QUESTION GROUPING === */
+        .question-group {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #dcdcdc; /* Light border around the group */
+            border-left: 4px solid #007bff; /* Highlight the left border for distinction */
+            border-radius: 5px;
+            background-color: #fafafa;
+        }
+        .group-heading {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #007bff;
+            margin-top: 0;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+        }
+        .group-instructions {
+            font-style: italic;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+            color: #555;
+        }
+
+        /* === INDIVIDUAL QUESTION AND INPUT === */
+        .question {
+            margin-bottom: 20px;
+            padding: 5px 0;
+        }
+        .question-content {
+            font-size: 1.0em;
+            margin-bottom: 5px;
+            font-weight: 400;
+        }
+        .question-order {
+            font-weight: bold;
+            margin-right: 8px;
+            color: #333; /* Darker number */
+        }
+        .question-input {
+            width: 95%; /* Take almost full width */
+            margin-top: 8px;
+            padding: 8px 10px;
+            border: 1px solid #aaa;
+            border-radius: 4px;
+            transition: border-color 0.3s;
+        }
+        .question-input:focus {
+            border-color: #007bff; /* Highlight on focus */
+            box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
+            outline: none;
+        }
+
+        /* === SUBMIT BUTTON === */
+        button[type="submit"] {
+            display: block;
+            width: 300px;
+            margin: 30px auto;
+            padding: 15px 30px;
+            font-size: 1.2em;
+            background-color: #28a745; /* Green for submit */
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button[type="submit"]:hover {
+            background-color: #218838;
+        }
+    </style>
+</head>
+<body>
+
+<div class="test-header">
+    <h1 th:text="${test.testName}">Test Name Placeholder</h1>
+    <p>IELTS Level: <span th:text="${test.testLevel}"></span> | Total Passages: 3</p>
+</div>
+
+<form action="/submit-answers" method="post">
+
+    <input type="hidden" name="testId" th:value="${test.id}" />
+
+    <div th:each="passage : ${test.passages}" th:id="'passage-' + ${passage.passageOrder}">
+
+        <div class="passage-container">
+
+            <div class="passage-column">
+                <h2 class="passage-title">Passage [[${passage.passageOrder}]] - <span th:text="${passage.title}"></span></h2>
+                <pre class="passage-text" th:text="${passage.passageText}"></pre>
+            </div>
+
+            <div class="questions-column">
+                <h2>Questions for Passage [[${passage.passageOrder}]]</h2>
+
+                <div th:each="group : ${passage.questionGroups}" class="question-group">
+
+                    <h3 class="group-heading">
+                        Questions [[${group.questions[0].questionOrder}]] - [[${group.questions[__${#lists.size(group.questions) - 1}__].questionOrder}]]
+                    </h3>
+
+                    <p class="group-instructions" th:text="${group.instructions}"></p>
+
+                    <div th:each="question : ${group.questions}" class="question">
+
+                        <div class="question-content">
+                            <span class="question-order" th:text="${question.questionOrder} + '.'"></span>
+                            <span th:text="${question.questionText}"></span>
+                        </div>
+
+                        <input
+                                type="text"
+                                class="question-input"
+                                th:name="'answer_' + ${question.id}"
+                                placeholder="Enter answer"
+                        />
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button type="submit" style="margin-top: 30px; padding: 10px 20px; font-size: 1.1em; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">
+        Submit Test Answers
+    </button>
+
+</form>
+
+</body>
+</html>
