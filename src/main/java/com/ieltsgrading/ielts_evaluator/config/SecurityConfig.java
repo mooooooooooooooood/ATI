@@ -4,6 +4,7 @@ import com.ieltsgrading.ielts_evaluator.service.CustomUserDetailsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -12,7 +13,6 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 @Configuration
 @EnableWebSecurity
@@ -42,6 +42,10 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+                .csrf(csrf -> csrf
+                        // ⭐ CRITICAL FIX: Ignore CSRF token validation for the asynchronous POST endpoint
+                        .ignoringRequestMatchers("/reading/tests/get-explanation")
+                )
                 .authorizeHttpRequests(auth -> auth
                         // Public resources
                         .requestMatchers("/", "/home", "/index").permitAll()
@@ -50,6 +54,9 @@ public class SecurityConfig {
                         .requestMatchers("/user/verify-email").permitAll()
                         .requestMatchers("/css/**", "/js/**", "/images/**", "/fonts/**").permitAll()
                         .requestMatchers("/error").permitAll()
+
+                        // Explicitly permit the explanation endpoint
+                        .requestMatchers(HttpMethod.POST, "/reading/tests/get-explanation").permitAll()
 
                         // Require login redirect
                         .requestMatchers("/require-login").permitAll()

@@ -50,27 +50,27 @@
 
     <div th:each="result : ${submissionResults}" class="detail-row">
 
-        <th:block th:with="questionTypeId = ${result.questionId == 24 ? 8 : (result.questionId == 25 ? 8 : (result.questionId == 26 ? 8 : 0))}">
+        <th:block th:with="questionTypeId = ${result.questionTypeId}, isSummaryCompletion = ${questionTypeId == 8}">
 
-            <p class="question-title">
+            <th:block th:if="${isSummaryCompletion}">
+                <div class="question-title">
+                    <span th:text="${result.questionOrder} + '. ' + ${result.questionText}">Question text placeholder</span>
+                </div>
+                <p>
+                    Your Answer (Raw):
+                    <span th:text="${result.userResponse}"></span>
+                    (Correct: <span th:text="${result.correctAnswer}"></span>)
+                </p>
+            </th:block>
 
-                <th:block th:if="${questionTypeId == 8}">
-                    <span th:utext="${#strings.replace(
-                        result.questionText,
-                        result.questionOrder + '__________',
-                        '<span class=\'embedded-answer ' + (result.isCorrect() ? 'correct' : 'incorrect') + '\'>' + result.userResponse + '</span>'
-                    )}">
-                        [Summary sentence with user answer embedded]
-                    </span>
-                </th:block>
-
-                <th:block th:if="${questionTypeId != 8}">
+            <th:block th:if="${!isSummaryCompletion}">
+                <p class="question-title">
                     <span th:text="${result.questionOrder} + '. '">1. </span>
                     <span th:text="${result.questionText}">Question text placeholder</span>
-                </th:block>
-            </p>
+                </p>
+            </th:block>
 
-            <p th:if="${questionTypeId != 8}">
+            <p th:if="${!isSummaryCompletion}">
                 Your Answer:
                 <span class="user-answer"
                       th:text="${#strings.isEmpty(result.userResponse)} ? '--- SKIPPED ---' : ${result.userResponse}"
@@ -94,8 +94,8 @@
                         <p>Generating personalized feedback...<span class="loading-dots">...</span> (QID: <span th:text="${result.questionId}"></span>)</p>
 
                         <input type="hidden" class="question-id" th:value="${result.questionId}" />
-                        <input type="hidden" class="user-response" th:value="${result.userResponse}" />
-                        <input type="hidden" class="correct-answer" th:value="${result.correctAnswer}" />
+                        <input type="hidden" class="user-response" th:value="${#strings.escapeXml(result.userResponse)}" />
+                        <input type="hidden" class="correct-answer" th:value="${#strings.escapeXml(result.correctAnswer)}" />
                     </div>
 
                     <div th:unless="${result.geminiExplanation == 'PENDING'}">

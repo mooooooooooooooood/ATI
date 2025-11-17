@@ -9,36 +9,40 @@ import com.ieltsgrading.ielts_evaluator.repository.ReadingQuestionRepository;
 import com.ieltsgrading.ielts_evaluator.repository.ReadingTestRepository;
 import com.ieltsgrading.ielts_evaluator.repository.ReadingUserAnswerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value; // ⭐ REQUIRED IMPORT
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.ModelAndView;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.ieltsgrading.ielts_evaluator.dto.gemini.GeminiRequest; // ⭐ DTO Import (Ensure package is correct)
-import com.ieltsgrading.ielts_evaluator.dto.gemini.GeminiResponse; // ⭐ DTO Import (Ensure package is correct)
-
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
+import com.ieltsgrading.ielts_evaluator.dto.gemini.GeminiRequest;
+import com.ieltsgrading.ielts_evaluator.dto.gemini.GeminiResponse;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.HttpStatusCodeException; // For catching 4xx/5xx errors
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.Collections;
+import java.util.Optional; // Added for readingTestRepository.findById
 
 @Service
 public class ReadingTestService {
 
-    //  1. Inject the API Key using @Value from application.properties
+    // Constants for Retry Logic
+    private static final int MAX_RETRIES = 3;
+    private static final long RETRY_DELAY_MS = 1000; // 1 second delay between retries
+
     @Value("${gemini.api.key}")
     private String GEMINI_API_KEY;
 
     // Define the Gemini model URL constants
     private final String GEMINI_MODEL = "gemini-2.5-flash";
-    private final String GEMINI_API_BASE_URL = "https://generativelanguage.googleapis.com/v1/models/" + GEMINI_MODEL + ":generateContent";
-
+    private final String GENERATE_CONTENT_URL = "https://generativelanguage.googleapis.com/v1/models/" + GEMINI_MODEL + ":generateContent";
 
     @Autowired
     private ReadingUserAnswerRepository answerRepository;
@@ -46,66 +50,118 @@ public class ReadingTestService {
     @Autowired
     private ReadingQuestionRepository questionRepository;
 
-    private final RestTemplate restTemplate = new RestTemplate();
-    private final String GRADING_API_URL = "http://external-grading-api/grade";
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    @Autowired
     private ReadingTestRepository readingTestRepository;
 
+    private final RestTemplate restTemplate = new RestTemplate();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
-    // --- Gemini Helper Method ---
+
+    // --- Gemini Helper Method (With Retry Logic) ---
 
     /**
      * Calls the Gemini API to get an explanation for an incorrect answer.
+     * Note: This method is used by the old fetchSingleExplanation and is NOT optimized for caching yet.
      */
     public String getGeminiExplanation(String questionText, String incorrectAnswer, String correctAnswer) {
         if (this.GEMINI_API_KEY.isEmpty() || this.GEMINI_API_KEY.startsWith("YOUR_")) {
             return "Explanation service is not configured (API key missing).";
         }
-        try {
-            // ⭐ CRITICAL CHANGE: Added the word count constraint (Max 30 Words) to the prompt ⭐
-            String prompt = String.format(
-                    "You are an IELTS tutor. Explain why the following answer is incorrect and why the correct answer is right. " +
-                            "The explanation MUST be very concise, **maximum 30 words**. " +
-                            "Question: \"%s\". My incorrect answer: \"%s\". The correct answer is: \"%s\".",
-                    questionText, incorrectAnswer, correctAnswer
-            );
 
-            // Prepare the Request Entity (Body and Headers)
-            GeminiRequest requestBody = new GeminiRequest(prompt);
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            HttpEntity<GeminiRequest> requestEntity = new HttpEntity<>(requestBody, headers);
+        String prompt = String.format(
+                "You are an IELTS tutor. Explain why the following answer is incorrect and why the correct answer is right. " +
+                        "The explanation MUST be very concise, **maximum 30 words**. " +
+                        "Question: \"%s\". My incorrect answer: \"%s\". The correct answer is: \"%s\".",
+                questionText, incorrectAnswer, correctAnswer
+        );
 
-            String finalApiUrl = GEMINI_API_BASE_URL + "?key=" + this.GEMINI_API_KEY;
+        GeminiRequest requestBody = new GeminiRequest(prompt);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<GeminiRequest> requestEntity = new HttpEntity<>(requestBody, headers);
+        String finalApiUrl = GENERATE_CONTENT_URL + "?key=" + this.GEMINI_API_KEY;
 
-            // Make the API call
-            ResponseEntity<GeminiResponse> response = restTemplate.exchange(
-                    finalApiUrl,
-                    HttpMethod.POST,
-                    requestEntity,
-                    GeminiResponse.class
-            );
 
-            // Parse the response
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                return response.getBody().getCandidates().stream()
-                        .findFirst()
-                        .map(c -> c.getContent().getParts().stream()
-                                .findFirst()
-                                .map(p -> p.getText())
-                                .orElse("No detailed content found."))
-                        .orElse("No explanation generated by Gemini.");
+        for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+            try {
+                ResponseEntity<GeminiResponse> response = restTemplate.exchange(
+                        finalApiUrl, HttpMethod.POST, requestEntity, GeminiResponse.class
+                );
+
+                if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                    return response.getBody().getCandidates().stream()
+                            .findFirst()
+                            .map(c -> c.getContent().getParts().stream()
+                                    .findFirst()
+                                    .map(p -> p.getText())
+                                    .orElse("No detailed content found."))
+                            .orElse("No explanation generated by Gemini.");
+                }
+
+                return "API Error: Status " + response.getStatusCode();
+
+            } catch (HttpStatusCodeException e) {
+                if (e.getStatusCode().value() == 503 && attempt < MAX_RETRIES) {
+                    System.out.println("Gemini overloaded (503). Retrying in " + RETRY_DELAY_MS + "ms (Attempt " + attempt + " of " + MAX_RETRIES + ")");
+                    try { Thread.sleep(RETRY_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+                    continue;
+                }
+                System.err.println("Gemini API HTTP Error. Status: " + e.getStatusCode() + ". Response: " + e.getResponseBodyAsString());
+                return "API Call failed: HTTP " + e.getStatusCode() + ".";
+            } catch (Exception e) {
+                System.err.println("Gemini API call failed (Attempt " + attempt + "): " + e.getMessage());
+                if (attempt == MAX_RETRIES) {
+                    return "Explanation unavailable due to connection error.";
+                }
+                try { Thread.sleep(RETRY_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
             }
-
-            return "API Error: Status " + response.getStatusCode();
-        } catch (Exception e) {
-            System.err.println("Gemini API call failed: " + e.getMessage());
-            return "Explanation unavailable due to connection error.";
         }
+
+        return "Explanation permanently unavailable after " + MAX_RETRIES + " retries (Model Overloaded).";
     }
 
 
-    // --- Existing Service Methods ---
+    // --- Core Service Methods ---
+
+    // ⭐ MISSING METHOD IMPLEMENTATION ADDED HERE ⭐
+    public List<ReadingResultDetailDTO> getPendingResults(int testId) {
+
+        // 1. Fetch all user answers for the test using the custom JPQL repository method (Must be defined in Repository).
+        List<ReadingUserAnswer> userAnswers = answerRepository.findAllByTestId(testId);
+
+        // 2. Filter the incorrect answers and map them to DTOs.
+        return userAnswers.stream()
+                // Filter: We only care about answers that were incorrect
+                .filter(answer -> !answer.getIsCorrect())
+
+                // Map: Convert the entity to the DTO for the front-end
+                .map(answer -> new ReadingResultDetailDTO(
+                        // questionId
+                        answer.getQuestion().getId(),
+
+                        // questionTypeId
+                        answer.getQuestion().getTypeId(),
+
+                        // questionOrder
+                        answer.getQuestion().getQuestionOrder(),
+
+                        // questionText
+                        answer.getQuestion().getQuestionText(),
+
+                        // userResponse
+                        answer.getUserResponse(),
+
+                        // correctAnswer
+                        answer.getQuestion().getCorrectAnswer(),
+
+                        // isCorrect
+                        answer.getIsCorrect(),
+
+                        // geminiExplanation (Set to PENDING to trigger the async fetch)
+                        "PENDING"
+                ))
+                .collect(Collectors.toList());
+    }
 
     public ReadingTest getTestById(int id) {
         return readingTestRepository.findById(id)
@@ -124,27 +180,22 @@ public class ReadingTestService {
         // Convert the list of submitted DTOs to a Map for fast lookup
         Map<Integer, String> userResponsesMap = submissionDTO.getAnswers().stream()
                 .collect(Collectors.toMap(
-                        ReadingSubmissionDTO.AnswerDTO::getQuestionId,
+                        dto -> dto.getQuestionId(),
                         dto -> dto.getUserResponse() != null ? dto.getUserResponse() : ""
                 ));
 
         List<ReadingUserAnswer> answersToStore = new java.util.ArrayList<>();
-        // List to hold the DTOs for the result page
         List<ReadingResultDetailDTO> submissionResults = new java.util.ArrayList<>();
 
         int correctCount = 0;
 
-        // --- CORE SCORING LOGIC (WITHOUT GEMINI CALL) ---
         for (ReadingQuestion question : allQuestions) {
             int questionId = question.getId();
-
-            // ... (Existing JSON parsing logic for question options if needed) ...
 
             String rawUserResponse = userResponsesMap.getOrDefault(questionId, "");
             String rawCorrectAnswer = question.getCorrectAnswer();
 
             boolean isCorrect = false;
-            // ⭐ Initialize explanation status (default to empty string)
             String explanationStatus = "";
 
             if (!rawUserResponse.trim().isEmpty()) {
@@ -156,7 +207,7 @@ public class ReadingTestService {
             if (isCorrect) {
                 correctCount++;
             } else if (!rawUserResponse.trim().isEmpty()) {
-                // ⭐ CRITICAL CHANGE: Set status to PENDING instead of calling Gemini
+                // Set status to PENDING
                 explanationStatus = "PENDING";
             }
 
@@ -169,21 +220,21 @@ public class ReadingTestService {
 
             answersToStore.add(userAnswer);
 
-            // 4. Map to DTO, passing the PENDING status
+            // 4. Map to DTO, passing the Question ID and Type ID
             submissionResults.add(new ReadingResultDetailDTO(
+                    question.getId(), // questionId
+                    question.getTypeId(), // questionTypeId
                     question.getQuestionOrder(),
                     question.getQuestionText(),
                     userAnswer.getUserResponse(),
                     rawCorrectAnswer,
                     isCorrect,
-                    explanationStatus // Pass the PENDING status or empty string
+                    explanationStatus
             ));
         }
 
         // 5. Save all user answers to the database
         answerRepository.saveAll(answersToStore);
-
-        // --- END OF CORE LOGIC (FAST LOADING) ---
 
         // Set the total questions for the result page
         int totalQuestions = allQuestions.size();
@@ -192,23 +243,15 @@ public class ReadingTestService {
         ModelAndView mav = new ModelAndView("reading-result");
         mav.addObject("totalQuestions", totalQuestions);
         mav.addObject("score", correctCount);
-        mav.addObject("submissionResults", submissionResults); // List with "PENDING" placeholders
+        mav.addObject("submissionResults", submissionResults);
 
-        // Get test name safely
+        // ⭐ SAFE FIX: Retrieve the test name directly using the testRepository
         String testName = "Test Results";
-        if (!allQuestions.isEmpty()) {
-            // Traverse the hierarchy to get test name (assuming relationships are loaded/accessible)
-            try {
-                testName = allQuestions.get(0).getGroup().getPassage().getTest().getTestName();
-            } catch (NullPointerException e) {
-                // Fallback if relationships were lazy-loaded or incomplete
-                System.err.println("Could not retrieve full test name hierarchy.");
-            }
+        Optional<ReadingTest> test = readingTestRepository.findById(testId);
+        if (test.isPresent()) {
+            testName = test.get().getTestName();
         }
         mav.addObject("testName", testName);
-
-        // Ensure you have the separate fetchSingleExplanation method implemented
-        // in this service and the corresponding @PostMapping in the controller.
 
         return mav;
     }
@@ -232,20 +275,32 @@ public class ReadingTestService {
         // 5. Trim again after cleanup
         return normalized.trim();
     }
+
     public String fetchSingleExplanation(int questionId, String userResponse, String correctAnswer) {
-        // 1. You would retrieve the question text here if needed, but since the DTO
-        //    already has the necessary context, we can call Gemini directly.
+        try {
+            // 1. Safely retrieve the question
+            ReadingQuestion question = questionRepository.findById(questionId).orElse(null);
 
-        // 2. Call the Gemini method (which still has the 30-word prompt logic):
-        ReadingQuestion question = questionRepository.findById(questionId)
-                .orElseThrow(() -> new RuntimeException("Question not found"));
+            if (question == null) {
+                System.err.println("Gemini Explanation Failed: ReadingQuestion not found for ID " + questionId);
+                return "Failed to retrieve explanation: Question data is missing.";
+            }
 
-        String explanation = getGeminiExplanation(
-                question.getQuestionText(),
-                userResponse,
-                correctAnswer
-        );
+            // 2. Ensure questionText is non-null before passing it to Gemini
+            String questionText = question.getQuestionText() != null ? question.getQuestionText() : "N/A";
 
-        return explanation;
+            // 3. Call the Gemini method
+            String explanation = getGeminiExplanation(
+                    questionText,
+                    userResponse,
+                    correctAnswer
+            );
+
+            return explanation;
+
+        } catch (Exception e) {
+            System.err.println("Unexpected error during Gemini explanation fetch for QID " + questionId + ": " + e.getMessage());
+            return "Failed to retrieve explanation: Service error occurred.";
+        }
     }
 }

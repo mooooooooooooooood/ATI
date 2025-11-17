@@ -24,6 +24,12 @@ public class ReadingTest {
     @OrderBy("passageOrder ASC") // Good practice for Sets
     private Set<ReadingPassage> passages; // CHANGED from List to Set
 
+    @Column(name = "gemini_cache_name")
+    private String geminiCacheName;
+
+    public String getGeminiCacheName() { return geminiCacheName; }
+    public void setGeminiCacheName(String geminiCacheName) { this.geminiCacheName = geminiCacheName; }
+
     // Getters and Setters
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
