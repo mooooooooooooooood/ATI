@@ -145,54 +145,6 @@
     color: #e53e3e;
 }
 
-/* Search Bar Styles */
-.header-search {
-    flex: 1;
-    max-width: 320px;
-}
-
-.header-search form {
-    display: flex;
-    background: #f7fafc;
-    border-radius: 20px;
-    overflow: hidden;
-    border: 1px solid #e2e8f0;
-    transition: border-color 0.3s;
-}
-
-.header-search form:focus-within {
-    border-color: #cbd5e0;
-}
-
-.header-search input {
-    flex: 1;
-    border: none;
-    background: transparent;
-    padding: 10px 16px;
-    outline: none;
-    font-size: 14px;
-    color: #2d3748;
-}
-
-.header-search input::placeholder {
-    color: #a0aec0;
-}
-
-.header-search button {
-    background: transparent;
-    border: none;
-    padding: 10px 16px;
-    cursor: pointer;
-    color: #718096;
-    transition: color 0.3s;
-    display: flex;
-    align-items: center;
-}
-
-.header-search button:hover {
-    color: #e53e3e;
-}
-
 /* Guest Actions */
 .guest-actions {
     display: flex;
