@@ -32,4 +32,12 @@ public class IeltsSpeakingTest {
 
     public String getPart3Question() { return part3Question; }
     public void setPart3Question(String part3Question) { this.part3Question = part3Question; }
+    public String getCamNumber() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getCamNumber'");
+    }
+    public String getTestNumber() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getTestNumber'");
+    }
 }
