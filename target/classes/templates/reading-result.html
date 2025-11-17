@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Results - <span th:text="${testName}"></span></title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 40px; background-color: #f4f7f6; text-align: center; }
+        .result-box { max-width: 600px; margin: 50px auto; background-color: #ffffff; padding: 40px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); text-align: center; }
+        h1 { color: #007bff; margin-bottom: 20px; }
+        .score-display { font-size: 3.5em; color: #28a745; font-weight: bold; margin: 20px 0; }
+        .correct-answers { color: #28a745; }
+        .total-questions { color: #ffc107; }
+        .action-link { display: inline-block; margin-top: 30px; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; }
+        /* --- Styles for Detailed Breakdown --- */
+        .details-container { max-width: 800px; margin: 40px auto; padding: 20px; background-color: #ffffff; border-radius: 10px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); text-align: left; }
+        .detail-row { padding: 15px 0; border-bottom: 1px solid #eee; }
+        .detail-row:last-child { border-bottom: none; }
+        .question-title { font-weight: bold; color: #333; margin-bottom: 5px; }
+        .user-answer { font-weight: bold; padding: 2px 5px; border-radius: 3px; }
+        .correct { color: #155724; background-color: #d4edda; }
+        .incorrect { color: #721c24; background-color: #f8d7da; }
+        .correct-display { color: #28a745; font-weight: bold; }
+        /* Style for displaying inline answers */
+        .embedded-answer { font-weight: bold; font-style: italic; text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+<div class="result-box">
+    <h1>IELTS Reading Test Results</h1>
+    <h2 th:text="${testName}">Test Title Placeholder</h2>
+
+    <p class="info-text">Your Score:</p>
+
+    <div class="score-display">
+        <span class="correct-answers" th:text="${score}">0</span> / <span class="total-questions" th:text="${totalQuestions}">40</span>
+    </div>
+
+    <p class="info-text">
+        You correctly answered **<span th:text="${score}">0</span>** questions out of **<span th:text="${totalQuestions}">40</span>**.
+    </p>
+
+    <a th:href="@{/reading/tests}" class="action-link">Back to Tests List</a>
+</div>
+
+<hr style="border-top: 1px dashed #ccc; margin: 30px auto; width: 600px;"/>
+
+<div class="details-container">
+    <h2>Answer Review</h2>
+
+    <div th:each="result : ${submissionResults}" class="detail-row">
+
+        <th:block th:with="questionTypeId = ${result.questionTypeId}, isSummaryCompletion = ${questionTypeId == 8}">
+
+            <th:block th:if="${isSummaryCompletion}">
+                <div class="question-title">
+                    <span th:text="${result.questionOrder} + '. ' + ${result.questionText}">Question text placeholder</span>
+                </div>
+                <p>
+                    Your Answer (Raw):
+                    <span th:text="${result.userResponse}"></span>
+                    (Correct: <span th:text="${result.correctAnswer}"></span>)
+                </p>
+            </th:block>
+
+            <th:block th:if="${!isSummaryCompletion}">
+                <p class="question-title">
+                    <span th:text="${result.questionOrder} + '. '">1. </span>
+                    <span th:text="${result.questionText}">Question text placeholder</span>
+                </p>
+            </th:block>
+
+            <p th:if="${!isSummaryCompletion}">
+                Your Answer:
+                <span class="user-answer"
+                      th:text="${#strings.isEmpty(result.userResponse)} ? '--- SKIPPED ---' : ${result.userResponse}"
+                      th:classappend="${result.isCorrect()} ? 'correct' : 'incorrect'">
+                    User's Answer
+                </span>
+
+                <span th:if="${!result.isCorrect()}" class="correct-display">
+                    (Correct: [[${result.correctAnswer}]])
+                </span>
+            </p>
+
+            <th:block th:if="${!result.isCorrect()}">
+                <div style="margin-top: 10px; padding: 10px; background-color: #f0f8ff; border-left: 5px solid #007bff; font-size: 0.9em; text-align: left;">
+                    <strong>🧠 Gemini Insight:</strong>
+
+                    <div th:if="${result.geminiExplanation == 'PENDING'}"
+                         th:id="'explanation-' + ${result.questionId}"
+                         class="loading-placeholder">
+
+                        <p>Generating personalized feedback...<span class="loading-dots">...</span> (QID: <span th:text="${result.questionId}"></span>)</p>
+
+                        <input type="hidden" class="question-id" th:value="${result.questionId}" />
+                        <input type="hidden" class="user-response" th:value="${#strings.escapeXml(result.userResponse)}" />
+                        <input type="hidden" class="correct-answer" th:value="${#strings.escapeXml(result.correctAnswer)}" />
+                    </div>
+
+                    <div th:unless="${result.geminiExplanation == 'PENDING'}">
+                        <p th:utext="${result.geminiExplanation}"></p>
+                    </div>
+                </div>
+            </th:block>
+        </th:block>
+    </div>
+</div>
+
+<script th:inline="javascript">
+    const API_EXPLANATION_URL = /*[[@{/reading/tests/get-explanation}]]*/ '/reading/tests/get-explanation';
+</script>
+<script type="text/javascript" th:src="@{/js/results-async-fetch.js}"></script>
+</body>
+</html>

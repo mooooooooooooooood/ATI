@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${pageTitle} ?: 'Speaking Test Collection'">Speaking Test Collection - EO.EO</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/test-collection.css}">
+    <link rel="stylesheet" th:href="@{/css/header.css}">
+    <link rel="stylesheet" th:href="@{/css/footer.css}">
+</head>
+<body>
+    <!-- Header -->
+    <header th:replace="~{fragments/header :: header}"></header>
+
+    <!-- Main Content -->
+    <main class="test-collection-page">
+        <div class="container">
+            <h1 class="page-title">Speaking test collection</h1>
+           
+            <div class="content-wrapper">
+                <!-- Sidebar -->
+                <aside class="sidebar">
+                    <div class="filter-section">
+                        <h3>Search</h3>
+                        <div class="search-box-sidebar">
+                            <input type="text" placeholder="Search" id="sidebarSearch"
+                                   th:value="${searchQuery}">
+                            <button>🔍</button>
+                        </div>
+                    </div>
+                   
+                    <div class="filter-section">
+                        <h3>Sort</h3>
+                        <label class="radio-option">
+                            <input type="radio" name="sort" value="newest"
+                                   th:checked="${currentSort == 'newest' or currentSort == null}">
+                            <span>Newest</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="sort" value="oldest"
+                                   th:checked="${currentSort == 'oldest'}">
+                            <span>Oldest</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="sort" value="most-attempted"
+                                   th:checked="${currentSort == 'most-attempted'}">
+                            <span>Most attempted</span>
+                        </label>
+                    </div>
+                </aside>
+
+                <!-- Test Grid -->
+                <section class="test-grid" id="speakingTestGrid">
+                    <!-- Tests from backend -->
+                    <div class="test-card"
+                         th:each="test : ${tests}"
+                         th:attr="data-bg=${test.background},
+                                  data-test-id=${test.id},
+                                  data-cam=${test.cam},
+                                  data-test-number=${test.testNumber}">
+                        <div class="test-thumbnail">
+                            <img th:src="@{/images/speaking.png}"
+                                 th:alt="${test.title}"
+                                 onerror="this.src='/images/Logo.png'">
+                        </div>
+                        <h3 th:text="${test.title}">CAM 20 - Speaking Test 1</h3>
+                        <p class="test-views" th:text="${test.views}">33K lượt làm</p>
+                        <button class="btn-do-test"
+                                th:onclick="|startSpeakingTest('${test.id}')|">
+                            <span class="icon">▶</span> Do the test
+                        </button>
+                    </div>
+                   
+                    <!-- Show message if no tests -->
+                    <div th:if="${#lists.isEmpty(tests)}"
+                         style="grid-column: 1 / -1; text-align: center; padding: 60px 20px;">
+                        <h3 style="font-size: 24px; color: #666; margin-bottom: 10px;">
+                            🎤 No speaking tests available
+                        </h3>
+                        <p style="color: #999;">
+                            Please check back later or contact support
+                        </p>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Pagination -->
+            <div class="pagination" th:if="${totalPages > 1}">
+                <button class="page-btn" th:disabled="${!hasPrevious}">‹</button>
+               
+                <!-- Dynamic page numbers -->
+                <th:block th:each="i : ${#numbers.sequence(1, totalPages > 5 ? 5 : totalPages)}">
+                    <button class="page-btn"
+                            th:classappend="${i == currentPage} ? 'active' : ''"
+                            th:text="${i}">1</button>
+                </th:block>
+               
+                <span th:if="${totalPages > 5}">...</span>
+                <button class="page-btn" th:if="${totalPages > 5}"
+                        th:text="${totalPages}">20</button>
+               
+                <button class="page-btn" th:disabled="${!hasNext}">›</button>
+            </div>
+           
+            <!-- Test Statistics -->
+            <div class="test-stats" th:if="${totalTests > 0}"
+                 style="text-align: center; margin-top: 20px; color: #666;">
+                <p>Showing <span th:text="${tests.size()}">16</span> of
+                   <span th:text="${totalTests}">80</span> speaking tests</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer th:replace="~{fragments/footer :: footer}"></footer>
+
+    <!-- Scripts -->
+    <script th:src="@{/js/header.js}" defer></script>
+    <script th:src="@{/js/main.js}"></script>
+    <script th:src="@{/js/speaking-test-collection.js}"></script>
+   
+    <!-- Pass server data to JavaScript -->
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        window.serverData = {
+            currentPage: /*[[${currentPage}]]*/ 1,
+            totalPages: /*[[${totalPages}]]*/ 1,
+            currentSort: /*[[${currentSort}]]*/ 'newest',
+            searchQuery: /*[[${searchQuery}]]*/ '',
+            totalTests: /*[[${totalTests}]]*/ 0
+        };
+       
+        // Update JavaScript variables with server data
+        if (window.serverData) {
+            currentPage = window.serverData.currentPage;
+            totalPages = window.serverData.totalPages;
+            currentSort = window.serverData.currentSort;
+            searchQuery = window.serverData.searchQuery;
+        }
+       
+        console.log('Server data loaded:', window.serverData);
+        /*]]>*/
+    </script>
+</body>
+</html>
