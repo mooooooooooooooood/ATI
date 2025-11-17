@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title th:text="${pageTitle}">Reading Test Result - EO.EO</title>
+    <title th:text="${pageTitle}">Listening Test Result - EO.EO</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
     <link rel="stylesheet" th:href="@{/css/header.css}">
     <link rel="stylesheet" th:href="@{/css/footer.css}">
@@ -15,7 +15,7 @@
         }
 
         .result-header {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
             padding: 50px 40px;
             border-radius: 20px;
             margin-bottom: 30px;
@@ -57,7 +57,7 @@
         }
 
         .score-box.overall {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
             color: white;
             grid-column: 1 / -1;
         }
@@ -76,7 +76,7 @@
         .score-number {
             font-size: 56px;
             font-weight: 700;
-            color: #00f2fe;
+            color: #fa709a;
         }
 
         .score-box.overall .score-number {
@@ -97,7 +97,7 @@
             color: #1a1a1a;
             margin-bottom: 25px;
             padding-bottom: 20px;
-            border-bottom: 3px solid #00f2fe;
+            border-bottom: 3px solid #fa709a;
         }
 
         .action-buttons {
@@ -119,14 +119,14 @@
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
             color: white;
         }
 
         .btn-secondary {
             background: white;
-            color: #00f2fe;
-            border: 2px solid #00f2fe;
+            color: #fa709a;
+            border: 2px solid #fa709a;
         }
     </style>
 </head>
@@ -135,44 +135,47 @@
 
     <main class="result-page">
         <div class="result-header">
-            <div class="test-type-badge">📖 Reading Test</div>
-            <h1 th:text="${submission.getTestDisplayName()}">CAM 20 - Reading Test 1</h1>
+            <div class="test-type-badge">🎧 Listening Test</div>
+            <h1 th:text="${submission.getTestDisplayName()}">CAM 20 - Listening Test 1</h1>
             
             <div class="score-summary">
                 <div class="score-box">
-                    <div class="score-label">Passage 1</div>
+                    <div class="score-label">Part 1</div>
+                    <div class="score-number">8.0</div>
+                </div>
+                <div class="score-box">
+                    <div class="score-label">Part 2</div>
+                    <div class="score-number">7.5</div>
+                </div>
+                <div class="score-box">
+                    <div class="score-label">Part 3</div>
                     <div class="score-number">7.0</div>
                 </div>
                 <div class="score-box">
-                    <div class="score-label">Passage 2</div>
-                    <div class="score-number">6.5</div>
-                </div>
-                <div class="score-box">
-                    <div class="score-label">Passage 3</div>
-                    <div class="score-number">7.5</div>
+                    <div class="score-label">Part 4</div>
+                    <div class="score-number">8.5</div>
                 </div>
                 <div class="score-box overall">
                     <div class="score-label">Overall Band Score</div>
-                    <div class="score-number" th:text="${submission.overallScore}">7.0</div>
+                    <div class="score-number" th:text="${submission.overallScore}">8.0</div>
                 </div>
             </div>
         </div>
 
         <div class="content-section">
-            <h2 class="section-title">📖 Reading Test - Coming Soon</h2>
+            <h2 class="section-title">🎧 Listening Test - Coming Soon</h2>
             <p style="text-align: center; font-size: 18px; color: #666; padding: 40px;">
-                Reading test result page is under development.<br>
+                Listening test result page is under development.<br>
                 This feature will be available soon!
             </p>
         </div>
 
         <div class="action-buttons">
             <a href="/dashboard" class="btn btn-secondary">← Back to Dashboard</a>
-            <a href="/reading/tests" class="btn btn-primary">Take Another Test →</a>
+            <a href="/listening/tests" class="btn btn-primary">Take Another Test →</a>
         </div>
     </main>
 
     <footer th:replace="~{fragments/footer :: footer}"></footer>
-
 </body>
 </html>
