@@ -101,7 +101,7 @@ public class TestController {
         User user = (User) session.getAttribute("loggedInUser");
 
         // This is the new, correct path handled by the dedicated controller
-        String redirectTarget = "/test/reading";
+        String redirectTarget = "/reading/tests";
 
         if (user == null) {
             // Redirect unauthenticated user to log in, preserving the target path

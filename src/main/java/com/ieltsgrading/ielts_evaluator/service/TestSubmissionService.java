@@ -27,7 +27,6 @@ public class TestSubmissionService {
     
     /**
      * Create new submission and save to database
-     * 🔥 NOW SETS testType = "writing"
      */
     @Transactional
     public TestSubmission createSubmission(User user, IeltsWritingTest test, 
@@ -38,10 +37,6 @@ public class TestSubmissionService {
         submission.setSubmissionUuid(UUID.randomUUID().toString());
         submission.setUser(user);
         submission.setTest(test);
-        
-        // 🔥 SET TEST TYPE
-        submission.setTestType("writing");
-        
         submission.setTask1Answer(task1Answer);
         submission.setTask2Answer(task2Answer);
         submission.setTask1WordCount(task1Words);
@@ -49,11 +44,6 @@ public class TestSubmissionService {
         submission.setTimeSpent(timeSpent);
         submission.setStatus("pending");
         submission.setSubmittedAt(LocalDateTime.now());
-        
-        System.out.println("✅ Creating submission:");
-        System.out.println("   UUID: " + submission.getSubmissionUuid());
-        System.out.println("   Test Type: " + submission.getTestType());
-        System.out.println("   Status: " + submission.getStatus());
         
         return submissionRepository.save(submission);
     }
@@ -86,13 +76,12 @@ public class TestSubmissionService {
             submissionRepository.save(submission);
             
             System.out.println("========================================");
-            System.out.println("📄 PROCESSING SUBMISSION: " + submissionUuid);
+            System.out.println("🔄 PROCESSING SUBMISSION: " + submissionUuid);
             System.out.println("   User: " + submission.getUser().getName());
             System.out.println("   Test: " + test.getDisplayId());
-            System.out.println("   Test Type: " + submission.getTestType());
             System.out.println("========================================");
             
-            // Call WritingApiService.submitCompleteTest()
+            // Call WritingApiService.submitCompleteTest() - This calls external API
             Map<String, Object> apiResults = writingApiService.submitCompleteTest(
                 test.getTask1Question(),
                 submission.getTask1Answer(),
@@ -101,7 +90,7 @@ public class TestSubmissionService {
                 test.getDirectImageUrl()
             );
             
-            System.out.println("🔥 API Response received: " + apiResults);
+            System.out.println("📥 API Response received: " + apiResults);
             
             // Check if API call was successful
             if (apiResults != null && "success".equals(apiResults.get("status"))) {
@@ -110,7 +99,9 @@ public class TestSubmissionService {
                 @SuppressWarnings("unchecked")
                 Map<String, Object> task1Result = (Map<String, Object>) apiResults.get("task1");
                 if (task1Result != null) {
+                    // Save raw JSON result
                     submission.setTask1Result(objectMapper.writeValueAsString(task1Result));
+                    // Extract band score from message
                     Double task1Score = extractScore(task1Result.get("message"));
                     submission.setTask1Score(task1Score);
                     System.out.println("   ✅ Task 1 Score: " + task1Score);
@@ -122,7 +113,9 @@ public class TestSubmissionService {
                 @SuppressWarnings("unchecked")
                 Map<String, Object> task2Result = (Map<String, Object>) apiResults.get("task2");
                 if (task2Result != null) {
+                    // Save raw JSON result
                     submission.setTask2Result(objectMapper.writeValueAsString(task2Result));
+                    // Extract band score from message
                     Double task2Score = extractScore(task2Result.get("message"));
                     submission.setTask2Score(task2Score);
                     System.out.println("   ✅ Task 2 Score: " + task2Score);
@@ -156,6 +149,7 @@ public class TestSubmissionService {
                 System.out.println("========================================\n");
                 
             } else {
+                // API call failed
                 String errorMsg = apiResults != null ? String.valueOf(apiResults.get("message")) : "API returned error status";
                 throw new Exception(errorMsg);
             }
@@ -251,6 +245,11 @@ public class TestSubmissionService {
     
     /**
      * Extract band score from API message
+     * Handles formats like:
+     * - "Band 7.0"
+     * - "Predicted score: Band 7.0"
+     * - "<h2>Band 7.0</h2>"
+     * - "Overall: **6.5**"
      */
     private Double extractScore(Object message) {
         if (message == null) {
@@ -259,9 +258,11 @@ public class TestSubmissionService {
         }
         
         String messageStr = message.toString();
+        
+        // Remove HTML tags
         messageStr = messageStr.replaceAll("<[^>]*>", "");
         
-        // Try pattern: "Band X.X"
+        // Try pattern 1: "Band X.X"
         Pattern pattern1 = Pattern.compile("Band\\s+(\\d+\\.?\\d*)");
         Matcher matcher1 = pattern1.matcher(messageStr);
         if (matcher1.find()) {
@@ -274,12 +275,13 @@ public class TestSubmissionService {
             }
         }
         
-        // Try pattern: numeric
+        // Try pattern 2: "Overall: **X.X**" or just numbers
         Pattern pattern2 = Pattern.compile("(\\d+\\.\\d+)");
         Matcher matcher2 = pattern2.matcher(messageStr);
         if (matcher2.find()) {
             try {
                 Double score = Double.parseDouble(matcher2.group(1));
+                // Only accept IELTS valid scores (0.0 - 9.0)
                 if (score >= 0.0 && score <= 9.0) {
                     System.out.println("   📊 Extracted score (numeric format): " + score);
                     return score;
@@ -290,6 +292,7 @@ public class TestSubmissionService {
         }
         
         System.err.println("   ⚠️ No valid band score found in message");
+        System.err.println("   Message preview: " + messageStr.substring(0, Math.min(100, messageStr.length())));
         return null;
     }
     
@@ -306,7 +309,9 @@ public class TestSubmissionService {
                 submission.setErrorMessage(null);
                 submissionRepository.save(submission);
                 
+                // Process again
                 processSubmissionAsync(submissionUuid);
+                
                 System.out.println("🔄 Retrying failed submission: " + submissionUuid);
             }
         }

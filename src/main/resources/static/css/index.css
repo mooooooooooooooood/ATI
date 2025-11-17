@@ -184,51 +184,51 @@
 
 /* Individual Card Colors (Optional) */
 .category-card:nth-child(1):hover::before {
-    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(90deg, #e53e3e 0%, #c53030 100%);
 }
 
 .category-card:nth-child(1):hover h3 {
-    color: #667eea;
+    color: #e53e3e;
 }
 
 .category-card:nth-child(1):hover .category-icon {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
 }
 
 .category-card:nth-child(2):hover::before {
-    background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+    background: linear-gradient(90deg, #38b2ac 0%, #2c7a7b 100%);
 }
 
 .category-card:nth-child(2):hover h3 {
-    color: #4facfe;
+    color: #38b2ac;
 }
 
 .category-card:nth-child(2):hover .category-icon {
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    background: linear-gradient(135deg, #38b2ac 0%, #2c7a7b 100%);
 }
 
 .category-card:nth-child(3):hover::before {
-    background: linear-gradient(90deg, #43e97b 0%, #38f9d7 100%);
+    background: linear-gradient(90deg, #ed8936 0%, #dd6b20 100%);
 }
 
 .category-card:nth-child(3):hover h3 {
-    color: #43e97b;
+    color: #ed8936;
 }
 
 .category-card:nth-child(3):hover .category-icon {
-    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
 }
 
 .category-card:nth-child(4):hover::before {
-    background: linear-gradient(90deg, #f093fb 0%, #f5576c 100%);
+    background: linear-gradient(90deg, #3182ce 0%, #2c5282 100%);
 }
 
 .category-card:nth-child(4):hover h3 {
-    color: #f093fb;
+    color: #3182ce;
 }
 
 .category-card:nth-child(4):hover .category-icon {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    background: linear-gradient(135deg, #3182ce 0%, #2c5282 100%);
 }
 
 /* ===================================
