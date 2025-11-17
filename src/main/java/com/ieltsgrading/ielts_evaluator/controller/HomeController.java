@@ -1,15 +1,11 @@
 package com.ieltsgrading.ielts_evaluator.controller;
 
-import com.ieltsgrading.ielts_evaluator.model.TestSubmission;
-import com.ieltsgrading.ielts_evaluator.model.User;
-import com.ieltsgrading.ielts_evaluator.service.TestSubmissionService;
+import com.ieltsgrading.ielts_evaluator.model.*;
+import com.ieltsgrading.ielts_evaluator.repository.*;
 import com.ieltsgrading.ielts_evaluator.service.UserService;
 import jakarta.servlet.http.HttpSession;
 
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
@@ -19,132 +15,149 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
-/**
- * Home Controller
- * Handles homepage and dashboard routes
- */
 @Controller
 public class HomeController {
-    @Autowired
-    private TestSubmissionService submissionService;
 
     @Autowired
     private UserService userService;
 
-    /**
-     * Homepage - Hiển thị cho cả guest và user đã đăng nhập
-     * 
-     * @return index.html (1 trang chung cho cả guest và user)
-     */
+    @Autowired
+    private WritingSubmissionRepository writingSubmissionRepository;
+
+    @Autowired(required = false)
+    private SpeakingSubmissionRepository speakingSubmissionRepository;
+
+    @Autowired(required = false)
+    private ListeningSubmissionRepository listeningSubmissionRepository;
+
+    @Autowired(required = false)
+    private ReadingSubmissionRepository readingSubmissionRepository;
+
     @GetMapping("/")
     public String home(Model model, HttpSession session) {
         model.addAttribute("pageTitle", "IELTS Test With AI");
-
-        // Kiểm tra trạng thái đăng nhập từ Spring Security
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         boolean isLoggedIn = auth != null && auth.isAuthenticated()
                 && !auth.getName().equals("anonymousUser");
 
         if (isLoggedIn) {
             try {
-                // Lấy user từ database dựa trên email
                 String email = auth.getName();
                 User user = userService.getUserByEmail(email);
-
-                // Đồng bộ với session
                 session.setAttribute("loggedInUser", user);
-
-                // Thêm vào model để header hiển thị đúng
                 model.addAttribute("isLoggedIn", true);
                 model.addAttribute("userName", user.getName());
                 model.addAttribute("user", user);
-
-                System.out.println("✅ User logged in: " + user.getName());
             } catch (Exception e) {
-                // Nếu không tìm thấy user, clear session
                 session.removeAttribute("loggedInUser");
                 model.addAttribute("isLoggedIn", false);
-                System.err.println("❌ Error loading user: " + e.getMessage());
             }
         } else {
-            // Guest mode
             session.removeAttribute("loggedInUser");
             model.addAttribute("isLoggedIn", false);
-            System.out.println("👤 Guest accessing homepage");
         }
-
-        return "index"; // ✅ Trả về index.html cho cả guest và user
+        return "index";
     }
 
-    /**
-     * Redirect /home về /
-     * (Nếu có ai đó truy cập /home)
-     */
     @GetMapping("/home")
     public String homeRedirect() {
         return "redirect:/";
     }
 
-    /**
-     * Redirect /index về /
-     * (Nếu có ai đó truy cập /index)
-     */
     @GetMapping("/index")
     public String indexRedirect() {
         return "redirect:/";
     }
 
     /**
-     * Dashboard page - Display user's test submissions
+     * Dashboard - Lấy submissions từ 4 tables khác nhau
      */
     @GetMapping("/dashboard")
     public String dashboard(Model model, HttpSession session) {
-        // Check Spring Security
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated() || auth.getName().equals("anonymousUser")) {
-            System.out.println("🚫 Unauthorized access to dashboard");
             return "redirect:/user/login?redirect=/dashboard";
         }
 
         try {
-            // Get user from database
             String email = auth.getName();
             User user = userService.getUserByEmail(email);
-
-            // Sync session
             session.setAttribute("loggedInUser", user);
 
-            // Get user submissions
-            List<TestSubmission> allSubmissions = submissionService.getUserSubmissions(user);
-            List<TestSubmission> processingSubmissions = new ArrayList<>();
-            List<TestSubmission> completedSubmissions = new ArrayList<>();
+            // 🔥 GET SUBMISSIONS FROM EACH TABLE
+            List<ITestSubmission> writingSubmissions = new ArrayList<>();
+            List<ITestSubmission> speakingSubmissions = new ArrayList<>();
+            List<ITestSubmission> listeningSubmissions = new ArrayList<>();
+            List<ITestSubmission> readingSubmissions = new ArrayList<>();
 
-            for (TestSubmission submission : allSubmissions) {
-                if (submission.isCompleted()) {
-                    completedSubmissions.add(submission);
-                } else if (submission.isProcessing() || submission.isPending()) {
-                    processingSubmissions.add(submission);
-                }
+            // Writing submissions
+            List<WritingSubmission> writingList = writingSubmissionRepository
+                    .findByUserOrderBySubmittedAtDesc(user);
+            writingSubmissions.addAll(writingList);
+
+            // Speaking submissions (nếu có repository)
+            if (speakingSubmissionRepository != null) {
+                List<SpeakingSubmission> speakingList = speakingSubmissionRepository
+                        .findByUserOrderBySubmittedAtDesc(user);
+                speakingSubmissions.addAll(speakingList);
             }
 
-            // Get statistics
-            Map<String, Object> stats = submissionService.getUserStats(user);
+            // Listening submissions (nếu có repository)
+            if (listeningSubmissionRepository != null) {
+                List<ListeningSubmission> listeningList = listeningSubmissionRepository
+                        .findByUserOrderBySubmittedAtDesc(user);
+                listeningSubmissions.addAll(listeningList);
+            }
 
+            // Reading submissions (nếu có repository)
+            if (readingSubmissionRepository != null) {
+                List<ReadingSubmission> readingList = readingSubmissionRepository
+                        .findByUserOrderBySubmittedAtDesc(user);
+                readingSubmissions.addAll(readingList);
+            }
+
+            // Calculate statistics
+            long totalTests = writingSubmissions.size() + speakingSubmissions.size() +
+                    listeningSubmissions.size() + readingSubmissions.size();
+
+            long completedTests = countCompleted(writingSubmissions) +
+                    countCompleted(speakingSubmissions) +
+                    countCompleted(listeningSubmissions) +
+                    countCompleted(readingSubmissions);
+
+            long processingTests = countProcessing(writingSubmissions) +
+                    countProcessing(speakingSubmissions) +
+                    countProcessing(listeningSubmissions) +
+                    countProcessing(readingSubmissions);
+
+            double averageScore = calculateAverageScore(
+                    writingSubmissions, speakingSubmissions,
+                    listeningSubmissions, readingSubmissions);
+
+            Map<String, Object> stats = new HashMap<>();
+            stats.put("totalTests", totalTests);
+            stats.put("completedTests", completedTests);
+            stats.put("processingTests", processingTests);
+            stats.put("averageScore", averageScore);
+
+            // Add to model
             model.addAttribute("pageTitle", "Dashboard - IELTS Test With AI");
             model.addAttribute("user", user);
             model.addAttribute("isLoggedIn", true);
-            model.addAttribute("processingSubmissions", processingSubmissions);
-            model.addAttribute("completedSubmissions", completedSubmissions);
+            model.addAttribute("writingSubmissions", writingSubmissions);
+            model.addAttribute("speakingSubmissions", speakingSubmissions);
+            model.addAttribute("listeningSubmissions", listeningSubmissions);
+            model.addAttribute("readingSubmissions", readingSubmissions);
             model.addAttribute("stats", stats);
 
-            System.out.println("📊 Dashboard loaded for: " + user.getName());
-            System.out.println("   Total submissions: " + allSubmissions.size());
-            System.out.println("   Processing: " + processingSubmissions.size());
-            System.out.println("   Completed: " + completedSubmissions.size());
+            System.out.println("📊 Dashboard loaded:");
+            System.out.println("   Writing: " + writingSubmissions.size());
+            System.out.println("   Speaking: " + speakingSubmissions.size());
+            System.out.println("   Listening: " + listeningSubmissions.size());
+            System.out.println("   Reading: " + readingSubmissions.size());
 
             return "dashboard";
         } catch (Exception e) {
-            session.removeAttribute("loggedInUser");
             System.err.println("❌ Dashboard error: " + e.getMessage());
             e.printStackTrace();
             return "redirect:/user/login";
@@ -152,7 +165,7 @@ public class HomeController {
     }
 
     /**
-     * View test result detail
+     * View result - Route dựa trên submission UUID prefix hoặc query parameter
      */
     @GetMapping("/result/{submissionUuid}")
     public String viewResult(
@@ -167,41 +180,43 @@ public class HomeController {
 
         try {
             User user = userService.getUserByEmail(auth.getName());
-            Optional<TestSubmission> optSubmission = submissionService.getSubmission(submissionUuid);
 
-            if (optSubmission.isEmpty()) {
+            // 🔥 TÌM SUBMISSION TRONG TẤT CẢ TABLES
+            ITestSubmission submission = findSubmissionByUuid(submissionUuid, user);
+
+            if (submission == null) {
                 model.addAttribute("error", "Submission not found");
                 return "error-404";
             }
 
-            TestSubmission submission = optSubmission.get();
-
             // Check ownership
-            if (!submission.getUser().getId().equals(user.getId())) {
+            if (!submission.getUserId().equals(user.getId())) {
                 model.addAttribute("error", "Access denied");
                 return "error-403";
             }
 
+            // Common model attributes
             model.addAttribute("pageTitle", "Test Result - " + submission.getTestDisplayName());
             model.addAttribute("user", user);
             model.addAttribute("isLoggedIn", true);
             model.addAttribute("submission", submission);
 
-            // Parse detailed results if completed
-            if (submission.isCompleted()) {
-                if (submission.getTask1Result() != null) {
-                    Map<String, Object> task1Detail = submissionService
-                            .parseDetailedResult(submission.getTask1Result());
-                    model.addAttribute("task1Detail", task1Detail);
-                }
-                if (submission.getTask2Result() != null) {
-                    Map<String, Object> task2Detail = submissionService
-                            .parseDetailedResult(submission.getTask2Result());
-                    model.addAttribute("task2Detail", task2Detail);
-                }
-            }
+            // Route to appropriate template
+            String testType = submission.getTestType().toLowerCase();
+            System.out.println("📄 Loading result for: " + testType);
 
-            return "test-result";
+            switch (testType) {
+                case "writing":
+                    return "writing-result";
+                case "speaking":
+                    return "speaking-result";
+                case "listening":
+                    return "listening-result";
+                case "reading":
+                    return "reading-result";
+                default:
+                    return "test-result";
+            }
 
         } catch (Exception e) {
             System.err.println("❌ Error loading result: " + e.getMessage());
@@ -211,95 +226,79 @@ public class HomeController {
         }
     }
 
-    /**
-     * Require login page - Thông báo cần đăng nhập
-     * 
-     * @return require-login.html
-     */
     @GetMapping("/require-login")
-    public String requireLogin(Model model, HttpSession session) {
-        // Nếu đã đăng nhập rồi, redirect về trang chủ
+    public String requireLogin(Model model) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.isAuthenticated() && !auth.getName().equals("anonymousUser")) {
-            System.out.println("🔄 Already logged in, redirecting to homepage");
             return "redirect:/";
         }
-
-        model.addAttribute("pageTitle", "Login Required - IELTS Test With AI");
+        model.addAttribute("pageTitle", "Login Required");
         return "require-login";
     }
 
-    /**
-     * About page
-     * 
-     * @return about.html
-     */
-    @GetMapping("/about")
-    public String about(Model model, HttpSession session) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        boolean isLoggedIn = auth != null && auth.isAuthenticated()
-                && !auth.getName().equals("anonymousUser");
+    /* ==================== HELPER METHODS ==================== */
 
-        model.addAttribute("pageTitle", "About Us - IELTS Test With AI");
-        model.addAttribute("isLoggedIn", isLoggedIn);
+    private ITestSubmission findSubmissionByUuid(String uuid, User user) {
+        // Try writing
+        Optional<WritingSubmission> writing = writingSubmissionRepository
+                .findBySubmissionUuid(uuid);
+        if (writing.isPresent() && writing.get().getUser().getId().equals(user.getId())) {
+            return writing.get();
+        }
 
-        if (isLoggedIn) {
-            try {
-                User user = userService.getUserByEmail(auth.getName());
-                session.setAttribute("loggedInUser", user);
-                model.addAttribute("userName", user.getName());
-            } catch (Exception e) {
-                // Ignore
+        // Try speaking
+        if (speakingSubmissionRepository != null) {
+            Optional<SpeakingSubmission> speaking = speakingSubmissionRepository
+                    .findBySubmissionUuid(uuid);
+            if (speaking.isPresent() && speaking.get().getUser().getId().equals(user.getId())) {
+                return speaking.get();
             }
         }
 
-        return "about";
+        // Try listening
+        if (listeningSubmissionRepository != null) {
+            Optional<ListeningSubmission> listening = listeningSubmissionRepository
+                    .findBySubmissionUuid(uuid);
+            if (listening.isPresent() && listening.get().getUser().getId().equals(user.getId())) {
+                return listening.get();
+            }
+        }
+
+        // Try reading
+        if (readingSubmissionRepository != null) {
+            Optional<ReadingSubmission> reading = readingSubmissionRepository
+                    .findBySubmissionUuid(uuid);
+            if (reading.isPresent() && reading.get().getUser().getId().equals(user.getId())) {
+                return reading.get();
+            }
+        }
+
+        return null;
     }
 
-    /**
-     * Contact page
-     * 
-     * @return contact.html
-     */
-    @GetMapping("/contact")
-    public String contact(Model model, HttpSession session) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        boolean isLoggedIn = auth != null && auth.isAuthenticated()
-                && !auth.getName().equals("anonymousUser");
-
-        model.addAttribute("pageTitle", "Contact Us - IELTS Test With AI");
-        model.addAttribute("isLoggedIn", isLoggedIn);
-
-        if (isLoggedIn) {
-            try {
-                User user = userService.getUserByEmail(auth.getName());
-                session.setAttribute("loggedInUser", user);
-                model.addAttribute("userName", user.getName());
-            } catch (Exception e) {
-                // Ignore
-            }
-        }
-
-        return "contact";
+    private long countCompleted(List<ITestSubmission> submissions) {
+        return submissions.stream().filter(ITestSubmission::isCompleted).count();
     }
 
-    /**
-     * Helper method: Sync user to session from Spring Security
-     * (Có thể dùng lại ở các controller khác)
-     */
-    private void syncUserToSession(HttpSession session) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.isAuthenticated() && !auth.getName().equals("anonymousUser")) {
-            try {
-                User user = userService.getUserByEmail(auth.getName());
-                session.setAttribute("loggedInUser", user);
-                System.out.println("🔄 Session synced for: " + user.getName());
-            } catch (Exception e) {
-                session.removeAttribute("loggedInUser");
-                System.err.println("❌ Sync failed: " + e.getMessage());
+    private long countProcessing(List<ITestSubmission> submissions) {
+        return submissions.stream()
+                .filter(s -> s.isProcessing() || s.isPending())
+                .count();
+    }
+
+    private double calculateAverageScore(List<ITestSubmission>... submissionLists) {
+        double totalScore = 0;
+        int count = 0;
+
+        for (List<ITestSubmission> list : submissionLists) {
+            for (ITestSubmission sub : list) {
+                if (sub.isCompleted() && sub.getOverallScore() != null) {
+                    totalScore += sub.getOverallScore();
+                    count++;
+                }
             }
-        } else {
-            session.removeAttribute("loggedInUser");
         }
+
+        return count > 0 ? Math.round(totalScore / count * 10.0) / 10.0 : 0.0;
     }
 }
