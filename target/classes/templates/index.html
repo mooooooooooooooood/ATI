@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${pageTitle}">IELTS Test With AI</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/index.css}">
+    <link rel="stylesheet" th:href="@{/css/header.css}">
+    <link rel="stylesheet" th:href="@{/css/footer.css}">
+
+</head>
+<body>
+    <!-- Header -->
+    <header th:replace="~{fragments/header :: header}"></header>
+
+    <main>
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-text">
+                    <h1>IELTS Test<br>With AI</h1>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Test Categories -->
+    <section class="test-categories">
+        <div class="container">
+            <div class="categories-grid">
+                <!-- Writing -->
+                <div class="category-card">
+                    <a th:href="${isLoggedIn ? '/test/writing' : '/require-login?redirect=/test/writing'}">
+                        <div class="category-icon">
+                            <img th:src="@{/images/writing.png}" alt="Writing">
+                        </div>
+                        <h3>Writing</h3>
+                        <p>30 Tests</p>
+                    </a>
+                </div>
+
+                <!-- Listening -->
+                <div class="category-card">
+                    <a th:href="${isLoggedIn ? '/test/listening' : '/require-login?redirect=/test/listening'}">
+                        <div class="category-icon">
+                            <img th:src="@{/images/listening.png}" alt="Listening">
+                        </div>
+                        <h3>Listening</h3>
+                        <p>40 Tests</p>
+                    </a>
+                </div>
+
+                <!-- Speaking -->
+                <div class="category-card">
+                    <a th:href="${isLoggedIn ? '/test/speaking' : '/require-login?redirect=/test/speaking'}">
+                        <div class="category-icon">
+                            <img th:src="@{/images/speaking.png}" alt="Speaking">
+                        </div>
+                        <h3>Speaking</h3>
+                        <p>50 Tests</p>
+                    </a>
+                </div>
+
+                <!-- Reading -->
+                <div class="category-card">
+                    <a th:href="${isLoggedIn ? '/test/reading' : '/require-login?redirect=/test/reading'}">
+                        <div class="category-icon">
+                            <img th:src="@{/images/reading.png}" alt="Reading">
+                        </div>
+                        <h3>Reading</h3>
+                        <p>55 Tests</p>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+    </main>
+
+    <!-- Footer -->
+    <footer th:replace="~{fragments/footer :: footer}"></footer>
+
+    <script th:src="@{/js/header.js}" defer></script>
+    <script th:src="@{/js/main.js}"></script>
+</body>
+</html>
