@@ -1,4 +1,4 @@
-package com.ieltsgrading.ielts_evaluator.dto;
+package com.ieltsgrading.ielts_evaluator.dto.reading;
 
 import java.util.List;
 

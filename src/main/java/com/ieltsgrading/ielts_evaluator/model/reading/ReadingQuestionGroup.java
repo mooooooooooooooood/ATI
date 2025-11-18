@@ -1,7 +1,7 @@
-package com.ieltsgrading.ielts_evaluator.model;
+package com.ieltsgrading.ielts_evaluator.model.reading;
 
 import jakarta.persistence.*;
-import java.util.List;
+
 import java.util.Set; // NEW IMPORT
 @Entity
 @Table(name = "reading_question_group")

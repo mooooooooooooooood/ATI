@@ -1,7 +1,8 @@
-package com.ieltsgrading.ielts_evaluator.model;
+package com.ieltsgrading.ielts_evaluator.model.reading;
 
+import com.ieltsgrading.ielts_evaluator.model.TestlevelEnums;
 import jakarta.persistence.*;
-import java.util.List;
+
 import java.util.Set; // NEW IMPORT
 
 @Entity

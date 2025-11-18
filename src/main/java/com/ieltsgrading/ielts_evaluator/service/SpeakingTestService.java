@@ -1,104 +1,93 @@
 package com.ieltsgrading.ielts_evaluator.service;
 
-import com.ieltsgrading.ielts_evaluator.dto.speaking.QuestionQueueItemDTO;
-import com.ieltsgrading.ielts_evaluator.dto.speaking.SpeakingTestFullDTO;
-import com.ieltsgrading.ielts_evaluator.dto.speaking.TestListItemDTO;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ieltsgrading.ielts_evaluator.dto.speaking.*;
 import com.ieltsgrading.ielts_evaluator.model.speaking.SpeakingTest;
 import com.ieltsgrading.ielts_evaluator.model.speaking.SpeakingTestDetail;
 import com.ieltsgrading.ielts_evaluator.model.speaking.SpeakingTestQuestion;
 import com.ieltsgrading.ielts_evaluator.repository.speaking.SpeakingTestRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestTemplate;
 
+import java.net.MalformedURLException;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * Service layer for managing IELTS Speaking Test data.
- * Handles business logic and transaction management.
+ * Service layer for managing IELTS Speaking Test data and external API communication.
  */
 @Service
 public class SpeakingTestService {
 
     private final SpeakingTestRepository testRepository;
+    private final RestTemplate restTemplate = new RestTemplate();
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Value("${grading.api.base-url}")
+    private String gradingApiBaseUrl;
 
     @Autowired
     public SpeakingTestService(SpeakingTestRepository testRepository) {
         this.testRepository = testRepository;
     }
 
-    /**
-     * Retrieves all Speaking Tests.
-     * Use @Transactional(readOnly = true) for performance on read operations.
-     */
+    // --- CRUD, Retrieval, and Queue Methods ---
+
     @Transactional(readOnly = true)
     public List<SpeakingTest> findAllTests() {
         return testRepository.findAll();
     }
 
-    /**
-     * Retrieves a specific Speaking Test by its ID, including all related details and questions.
-     * * Note: Depending on your JPA setup (e.g., fetch type and how you load the data),
-     * this method might need to be explicitly transactional to load lazy-fetched
-     * associations (details and questions) before the session closes.
-     */
     @Transactional(readOnly = true)
     public Optional<SpeakingTest> findTestById(Integer id) {
-        // Assuming you have configured the relationship fetching (E.g., using
-        // a custom query in the repository for EAGER loading or relying on
-        // the transactional context for LAZY loading).
         return testRepository.findById(id);
     }
 
-    /**
-     * Searches for Speaking Tests whose main topic contains the given keyword.
-     * Note: This requires defining a method in the SpeakingTestRepository:
-     * List<SpeakingTest> findByMainTopicContainingIgnoreCase(String keyword);
-     */
     @Transactional(readOnly = true)
     public List<SpeakingTest> searchTestsByMainTopic(String keyword) {
-        // Implement the search logic using a derived query method
         return testRepository.findByMainTopicContainingIgnoreCase(keyword);
     }
 
-    /**
-     * Saves a new Speaking Test entity.
-     */
     @Transactional
     public SpeakingTest saveTest(SpeakingTest test) {
         return testRepository.save(test);
     }
 
-    /**
-     * Deletes a Speaking Test by ID.
-     * Due to CASCADE settings in the schema, this should delete all associated
-     * details and questions.
-     */
     @Transactional
     public void deleteTest(Integer id) {
         testRepository.deleteById(id);
     }
+
     @Transactional(readOnly = true)
     public List<TestListItemDTO> findAllTestListItems() {
-        // 1. Fetch all SpeakingTest entities
         List<SpeakingTest> tests = testRepository.findAll();
-
-        // 2. Map the entities to the DTO list
         return tests.stream()
-                .map(test -> new TestListItemDTO(
-                        test.getTestId(),
-                        test.getTestDate(),
-                        test.getMainTopic()
-                ))
+                .map(test -> new TestListItemDTO(test.getTestId(), test.getTestDate(), test.getMainTopic()))
                 .collect(Collectors.toList());
     }
+
     @Transactional(readOnly = true)
     public SpeakingTestFullDTO getFullTestDetails(Integer testId) {
-        // Fetch the test entity. Use findById().orElseThrow() for clean error handling.
         SpeakingTest test = testRepository.findById(testId)
                 .orElseThrow(() -> new RuntimeException("Test not found with ID: " + testId));
 
@@ -107,10 +96,8 @@ public class SpeakingTestService {
         dto.setTestDate(test.getTestDate());
         dto.setMainTopic(test.getMainTopic());
 
-        // --- Process Speaking Test Details (Part 1 Topics & Cue Card) ---
         List<String> part1Topics = test.getDetails().stream()
                 .filter(d -> d.getPartTopic().equals("Part 1 Topics"))
-                // Split the detail_text (e.g., 'Work|Parties') into individual topics
                 .flatMap(d -> List.of(d.getDetailText().split("\\|")).stream())
                 .collect(Collectors.toList());
 
@@ -123,21 +110,18 @@ public class SpeakingTestService {
         dto.setPart1Topics(part1Topics);
         dto.setPart2CueCard(part2CueCard);
 
-        // --- Process Questions (Part 1 & Part 3) ---
         Map<String, List<String>> questionsMap = test.getQuestions().stream()
-                // Group questions by their part_number ('Part 1', 'Part 3')
                 .collect(Collectors.groupingBy(
                         SpeakingTestQuestion::getPartNumber,
                         Collectors.mapping(SpeakingTestQuestion::getQuestionText, Collectors.toList())
                 ));
 
         dto.setQuestionsByPart(questionsMap);
-
         return dto;
     }
+
     @Transactional(readOnly = true)
     public List<QuestionQueueItemDTO> buildQuestionQueue(Integer testId) {
-        // 1. Fetch the main test entity (ensure questions are loaded)
         SpeakingTest test = testRepository.findById(testId)
                 .orElseThrow(() -> new RuntimeException("Test not found with ID: " + testId));
 
@@ -145,13 +129,117 @@ public class SpeakingTestService {
                 .map(q -> new QuestionQueueItemDTO(q.getQuestionId(), q.getPartNumber(), q.getQuestionText()))
                 .collect(Collectors.toList());
 
-        // 2. Sort the queue sequentially: Part 1 questions first, then Part 3 questions.
-        // We assume the database query naturally returned questions within a part in order.
         queue.sort(Comparator.comparing(QuestionQueueItemDTO::getPartNumber));
-
-        // NOTE: Part 2 (Cue Card) is generally treated as a single event.
-        // We'll add a dummy entry or handle the Cue Card separately in the Controller.
-
         return queue;
+    }
+
+    // --- External API Submission Logic ---
+
+    /**
+     * Submits the collected answers to the external grading API using multipart/form-data.
+     */
+    public ResponseEntity<String> submitForGrading(GradingRequestDTO request, boolean isCueCardTask) {
+
+        // 1. Prepare Data Components
+        List<String> questionTexts = request.getAnswers().stream()
+                .map(UserAnswerDTO::getQuestionText)
+                .collect(Collectors.toList());
+
+        List<String> fileUrls = request.getAnswers().stream()
+                .map(UserAnswerDTO::getRecordedAudioUrl)
+                .collect(Collectors.toList());
+
+        String questionsJsonString;
+        try {
+            // A. Convert questions list to the required JSON String
+            questionsJsonString = objectMapper.writeValueAsString(questionTexts);
+        } catch (JsonProcessingException e) {
+            System.err.println("Error serializing questions list: " + e.getMessage());
+            return new ResponseEntity<>("{\"error_message\": \"Internal serialization error.\"}", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        // B. Determine topic value
+        String topicValue = isCueCardTask ? "Speaking Part 2" : "Speaking Practice Task";
+
+        // 2. Build the MultiValueMap (the multipart/form-data body)
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+
+        // Field 1: Stringified Questions
+        body.add("questions", questionsJsonString);
+
+        // Field 2: Topic
+        body.add("topic", topicValue);
+
+        // Field 3: Files (Convert URLs to Resources)
+        for (int i = 0; i < fileUrls.size(); i++) {
+            String url = fileUrls.get(i);
+            try {
+                // a. Create a Resource object from the URL string
+                Resource resource = new UrlResource(url);
+
+                // b. Create specific headers for the file part
+                HttpHeaders fileHeader = new HttpHeaders();
+
+                // Use a unique name for Content-Disposition
+                String filename = "answer_" + UUID.randomUUID().toString() + ".webm";
+
+                // The media type should match the audio type uploaded (WebM)
+                fileHeader.setContentType(MediaType.valueOf("audio/webm"));
+
+                // Set the Content-Disposition (filename is key for multipart validation)
+                fileHeader.setContentDispositionFormData("files", filename);
+
+                // c. Create the HttpEntity, simulating a file upload part
+                HttpEntity<Resource> filePart = new HttpEntity<>(resource, fileHeader);
+
+                // d. Add the file part to the form body
+                body.add("files", filePart);
+
+            } catch (MalformedURLException e) {
+                System.err.println("Skipping file due to invalid URL: " + url + " Error: " + e.getMessage());
+            } catch (Exception e) {
+                System.err.println("Error creating resource for URL " + url + ": " + e.getMessage());
+            }
+        }
+
+        // 3. Set Headers and Execute Request
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+
+        HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
+
+        // 4. Determine endpoint and Execute Request
+        // Ensure your base URL is set correctly in application.properties
+        String endpoint = "/speaking/multi";
+        String fullUrl = gradingApiBaseUrl + endpoint;
+
+        try {
+            System.out.println("Submitting request to: " + fullUrl + " (Multipart)");
+
+            return restTemplate.exchange(
+                    fullUrl,
+                    HttpMethod.POST,
+                    requestEntity,
+                    String.class
+            );
+
+        } catch (HttpClientErrorException e) {
+            // Handles 4xx errors from the external API
+            System.err.println("External API HTTP Error (" + e.getStatusCode() + "): " + e.getResponseBodyAsString());
+            String errorMessage = "Grading API returned an error: " + e.getStatusCode().value();
+
+            return new ResponseEntity<>(
+                    "{\"error_message\": \"" + errorMessage + "\", \"details\": " + e.getResponseBodyAsString() + "\"",
+                    e.getStatusCode()
+            );
+
+        } catch (ResourceAccessException e) {
+            // Handles connection errors (e.g., timeout, server down)
+            String errorMessage = "Grading API server is unreachable. Please check configuration.";
+            return new ResponseEntity<>(
+                    "{\"error_message\": \"" + errorMessage + "\"}",
+                    HttpStatus.SERVICE_UNAVAILABLE
+            );
+        }
     }
 }

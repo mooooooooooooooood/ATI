@@ -1,4 +1,4 @@
-package com.ieltsgrading.ielts_evaluator.model;
+package com.ieltsgrading.ielts_evaluator.model.reading;
 
 import jakarta.persistence.*;
 

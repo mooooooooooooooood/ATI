@@ -1,6 +1,6 @@
 package com.ieltsgrading.ielts_evaluator.repository;
 
-import com.ieltsgrading.ielts_evaluator.model.ReadingQuestionGroup;
+import com.ieltsgrading.ielts_evaluator.model.reading.ReadingQuestionGroup;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

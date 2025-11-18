@@ -1,7 +1,7 @@
 // ReadingUserAnswerRepository.java
 package com.ieltsgrading.ielts_evaluator.repository;
 
-import com.ieltsgrading.ielts_evaluator.model.ReadingUserAnswer;
+import com.ieltsgrading.ielts_evaluator.model.reading.ReadingUserAnswer;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

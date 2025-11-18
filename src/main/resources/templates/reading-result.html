@@ -8,9 +8,8 @@
         .result-box { max-width: 600px; margin: 50px auto; background-color: #ffffff; padding: 40px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); text-align: center; }
         h1 { color: #007bff; margin-bottom: 20px; }
         .score-display { font-size: 3.5em; color: #28a745; font-weight: bold; margin: 20px 0; }
-        .correct-answers { color: #28a745; }
-        .total-questions { color: #ffc107; }
         .action-link { display: inline-block; margin-top: 30px; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; }
+
         /* --- Styles for Detailed Breakdown --- */
         .details-container { max-width: 800px; margin: 40px auto; padding: 20px; background-color: #ffffff; border-radius: 10px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); text-align: left; }
         .detail-row { padding: 15px 0; border-bottom: 1px solid #eee; }
@@ -20,8 +19,12 @@
         .correct { color: #155724; background-color: #d4edda; }
         .incorrect { color: #721c24; background-color: #f8d7da; }
         .correct-display { color: #28a745; font-weight: bold; }
-        /* Style for displaying inline answers */
-        .embedded-answer { font-weight: bold; font-style: italic; text-decoration: underline; }
+
+        /* --- Styles for Comprehensive Review Cards --- */
+        .review-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; margin-top: 20px; }
+        .review-card { background-color: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6; text-align: left; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .review-card h3 { color: #007bff; margin-top: 0; font-size: 1.1em; border-bottom: 2px solid #007bff; padding-bottom: 5px; }
+        .loading-review-message { padding: 20px; font-size: 1.1em; color: #6c757d; }
     </style>
 </head>
 <body>
@@ -44,6 +47,43 @@
 </div>
 
 <hr style="border-top: 1px dashed #ccc; margin: 30px auto; width: 600px;"/>
+
+
+<div class="details-container">
+    <h2>🧠 Comprehensive AI Performance Review</h2>
+
+    <input type="hidden" id="testId" th:value="${testId}">
+
+    <div id="loading-review-message" class="loading-review-message">
+        Generating comprehensive, categorized performance review... Please wait.
+    </div>
+
+    <div id="comprehensive-review-container" class="review-grid" style="display: none;">
+
+        <div class="review-card">
+            <h3>Overview Summary</h3>
+            <p id="review-summary">Loading...</p>
+        </div>
+
+        <div class="review-card">
+            <h3>Vocabulary Weaknesses</h3>
+            <p id="review-vocabulary">Loading...</p>
+        </div>
+
+        <div class="review-card">
+            <h3>Question Type Insights</h3>
+            <p id="review-question-type">Loading...</p>
+        </div>
+
+        <div class="review-card">
+            <h3>Strategy Recommendations</h3>
+            <p id="review-strategy">Loading...</p>
+        </div>
+    </div>
+</div>
+
+<hr style="border-top: 1px dashed #ccc; margin: 30px auto; width: 600px;"/>
+
 
 <div class="details-container">
     <h2>Answer Review</h2>
@@ -70,7 +110,7 @@
                 </p>
             </th:block>
 
-            <p th:if="${!isSummaryCompletion}">
+            <p>
                 Your Answer:
                 <span class="user-answer"
                       th:text="${#strings.isEmpty(result.userResponse)} ? '--- SKIPPED ---' : ${result.userResponse}"
@@ -83,33 +123,10 @@
                 </span>
             </p>
 
-            <th:block th:if="${!result.isCorrect()}">
-                <div style="margin-top: 10px; padding: 10px; background-color: #f0f8ff; border-left: 5px solid #007bff; font-size: 0.9em; text-align: left;">
-                    <strong>🧠 Gemini Insight:</strong>
-
-                    <div th:if="${result.geminiExplanation == 'PENDING'}"
-                         th:id="'explanation-' + ${result.questionId}"
-                         class="loading-placeholder">
-
-                        <p>Generating personalized feedback...<span class="loading-dots">...</span> (QID: <span th:text="${result.questionId}"></span>)</p>
-
-                        <input type="hidden" class="question-id" th:value="${result.questionId}" />
-                        <input type="hidden" class="user-response" th:value="${#strings.escapeXml(result.userResponse)}" />
-                        <input type="hidden" class="correct-answer" th:value="${#strings.escapeXml(result.correctAnswer)}" />
-                    </div>
-
-                    <div th:unless="${result.geminiExplanation == 'PENDING'}">
-                        <p th:utext="${result.geminiExplanation}"></p>
-                    </div>
-                </div>
-            </th:block>
         </th:block>
     </div>
 </div>
 
-<script th:inline="javascript">
-    const API_EXPLANATION_URL = /*[[@{/reading/tests/get-explanation}]]*/ '/reading/tests/get-explanation';
-</script>
-<script type="text/javascript" th:src="@{/js/results-async-fetch.js}"></script>
+<script type="text/javascript" th:src="@{/js/results-review-fetch.js}"></script>
 </body>
 </html>
