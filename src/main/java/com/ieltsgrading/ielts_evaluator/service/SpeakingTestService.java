@@ -51,7 +51,7 @@ public class SpeakingTestService {
         this.testRepository = testRepository;
     }
 
-    // --- CRUD, Retrieval, and Queue Methods ---
+    // --- CRUD, Retrieval, and Queue Methods (Mostly unchanged) ---
 
     @Transactional(readOnly = true)
     public List<SpeakingTest> findAllTests() {
@@ -120,20 +120,44 @@ public class SpeakingTestService {
         return dto;
     }
 
+    /**
+     * Builds a single queue of questions for the test, combining database questions (P1, P3)
+     * and the manually constructed Cue Card (P2).
+     */
     @Transactional(readOnly = true)
     public List<QuestionQueueItemDTO> buildQuestionQueue(Integer testId) {
+
         SpeakingTest test = testRepository.findById(testId)
                 .orElseThrow(() -> new RuntimeException("Test not found with ID: " + testId));
 
+        // 1. Initialize queue with Part 1 and Part 3 questions from the repository
         List<QuestionQueueItemDTO> queue = test.getQuestions().stream()
                 .map(q -> new QuestionQueueItemDTO(q.getQuestionId(), q.getPartNumber(), q.getQuestionText()))
                 .collect(Collectors.toList());
 
+        // 2. Fetch the Part 2 detail text (Cue Card)
+        String part2Text = test.getDetails().stream()
+                .filter(d -> d.getPartTopic().equals("Part 2 Cue Card"))
+                .map(SpeakingTestDetail::getDetailText)
+                .findFirst()
+                .orElse("Part 2 Cue Card Not Found");
+
+        // 3. Manually create the queue item for Part 2
+        QuestionQueueItemDTO part2Item = new QuestionQueueItemDTO();
+        part2Item.setQuestionId(-99); // Use a non-DB, unique ID for the cue card task
+        part2Item.setPartNumber("Part 2");
+        part2Item.setQuestionText(part2Text);
+
+        // 4. CRITICAL FIX: Add the Part 2 item to the queue!
+        queue.add(part2Item);
+
+        // 5. Sort the entire queue by Part Number (ensuring Part 1, 2, 3 sequence)
         queue.sort(Comparator.comparing(QuestionQueueItemDTO::getPartNumber));
+
         return queue;
     }
 
-    // --- External API Submission Logic ---
+    // --- External API Submission Logic (Unchanged) ---
 
     /**
      * Submits the collected answers to the external grading API using multipart/form-data.

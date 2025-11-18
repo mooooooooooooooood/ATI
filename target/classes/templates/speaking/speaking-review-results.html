@@ -1,148 +1,193 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IELTS Speaking Results Analysis</title>
-    <!-- Load Tailwind CSS -->
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IELTS Speaking Results</title>
+
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+
     <style>
-        /* Custom font and base styling */
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f7f9fb;
+        /* Custom overrides on top of Tailwind */
+        .page-container {
+            max-width: 1280px;
+            margin: auto;
+            background-color: #ffffff;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            border-top: 8px solid #4f46e5; /* Indigo-600 */
         }
-        /* Custom styles for assessment text formatting */
+
+        /* Part Header Styling */
+        .part-header-container {
+            background: linear-gradient(to right, #374151, #1f2937); /* Dark gray gradient */
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 0.5rem;
+            margin-top: 3rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .overall-score-display {
+            font-size: 4rem;
+            font-weight: 900;
+            color: #10b981; /* Emerald-500 */
+            line-height: 1;
+        }
+
+        .criteria-grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+        @media (min-width: 1024px) {
+            .criteria-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .criteria-card {
+            background-color: #f9fafb;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            border: 1px solid #e5e7eb;
+            border-left: 5px solid #6366f1; /* Indigo-500 */
+            transition: transform 0.2s;
+        }
+        .criteria-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
         .assessment-text {
-            white-space: pre-wrap; /* Ensures paragraphs and newlines from the JSON are respected */
+            white-space: pre-wrap;
             line-height: 1.6;
             font-size: 0.95rem;
+            color: #4b5563;
+            background-color: white;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid #e5e7eb;
+            margin-top: 0.5rem;
+        }
+
+        .sub-header {
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #6b7280;
+            margin-top: 1rem;
+            margin-bottom: 0.25rem;
         }
     </style>
 </head>
-<body class="min-h-screen p-4 md:p-8">
+<body class="bg-gray-100 text-gray-800 font-sans">
 
-<div class="max-w-4xl mx-auto bg-white shadow-2xl rounded-xl p-6 md:p-10 border-t-4 border-indigo-600">
-    <header class="text-center pb-6 border-b border-gray-100">
-        <h1 class="text-3xl md:text-4xl font-extrabold text-gray-800">
-            AI IELTS Speaking Evaluation 🤖
+<div class="page-container mt-10 mb-10">
+
+    <header class="text-center pb-6 border-b border-gray-200">
+        <h1 class="text-4xl font-extrabold text-gray-900 tracking-tight">
+            AI IELTS Speaking Report 🎓
         </h1>
-        <p class="text-lg text-indigo-600 mt-2">Detailed Breakdown & Feedback</p>
+        <p class="text-lg text-indigo-600 mt-2">Comprehensive Test Analysis</p>
     </header>
 
-    <!-- Overall Score Section -->
-    <section id="overall-score-section" class="text-center py-8 bg-indigo-50/50 rounded-lg mt-6 shadow-inner">
-        <h2 class="text-xl font-semibold text-gray-600">Overall Band Score</h2>
-        <div id="overall-band" class="text-7xl font-black text-indigo-700 mt-2">
-            --
-        </div>
-        <p class="text-sm text-gray-500 mt-1">Achieved in Speaking Practice</p>
-    </section>
+    <div th:if="${finalOverallBand != null}">
+        <section class="text-center py-8 bg-indigo-50 rounded-xl mt-8 border border-indigo-100">
+            <h2 class="text-xl font-semibold text-gray-600 uppercase tracking-widest mb-2">Overall Test Band Score</h2>
+            <div class="overall-score-display" th:text="${#numbers.formatDecimal(finalOverallBand, 1, 1)}">7.0</div>
+            <p class="text-sm text-gray-500 mt-2">Average score across Part 1, Part 2, and Part 3</p>
 
-    <!-- Detailed Criteria Grid -->
-    <section class="mt-10">
-        <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-2">Criterion Breakdown</h2>
-        <div id="criteria-container" class="space-y-8">
-            <!-- Results will be injected here -->
-        </div>
-    </section>
+            <div class="mt-6">
+                <a th:href="@{/speaking/tests}" class="inline-block px-8 py-3 bg-indigo-600 text-white font-semibold rounded-lg shadow hover:bg-indigo-700 transition duration-200 ease-in-out">
+                    Start New Test
+                </a>
+            </div>
+        </section>
 
-    <!-- Raw JSON Data (Hidden) -->
-    <script id="raw-json-data" type="application/json">
-        {"message":"{\n  \"overall_band\": 6.0,\n  \"fluency_and_coherence\": {\n    \"band\": 7.0,\n    \"assessment\": \"The candidate's fluency is good, but there are moments where she struggles to maintain a consistent pace. She occasionally uses filler words such as 'um' and 'like'. Her vocabulary is decent, and she uses a range of words to express herself.\n\nA notable example is a long, run-on explanation where she describes how her mother began with a modeling job, later became a director of finance, built office buildings and a house by herself, and succeeded despite lacking a formal educational background. She continues to elaborate that her mother is knowledgeable, opinionated, assertive, and highly inspiring. She also describes her mother’s difficult childhood during the war in Sri Lanka, her resilience, her achievements, and her dedication as a working mother who remained heavily involved in her children’s upbringing.\n\nWhile coherent, the long, uninterrupted stretches of speech reduce clarity and make the answer sound less controlled.\"\n\n    },\n  \"lexical_resource\": {\n    \"band\": 6.0,\n    \"assessment\": \"The candidate demonstrates adequate vocabulary but often relies on general or repetitive expressions. A large portion of her response consists of a long, unstructured narrative with repeated phrases such as'she started','she built','she made sure', and'she never let anything stop her'.\n\nDespite demonstrating admiration effectively, the language lacks precision and relies heavily on everyday expressions. More topic-specific vocabulary, paraphrasing, and a wider lexical range would strengthen her score.\"\n\n    },\n  \"grammatical_range_accuracy\": {\n    \"band\": 6.5,\n    \"assessment\": \"The candidate uses mostly simple or loosely connected sentence structures. Much of her response is one extended run-on sentence linked by 'and', 'but', and'so'. Although grammar is generally understandable, the lack of controlled complex structures limits accuracy.\n\nSome clauses are repeated or blended together without punctuation, reducing clarity. More varied sentence forms and clearer segmentation would improve grammatical control.\"\n\n    },\n  \"pronunciation\": {\n    \"band\": 6.0,\n    \"assessment\": \"The candidate's pronunciation is generally understandable, though she occasionally struggles with articulation and rhythm. Some words are slightly unclear, and connected speech sometimes becomes muddled due to long, uninterrupted sentences. However, her accent is intelligible, and meaning remains clear.\n\nShe also uses a mildly formal tone, which aligns with her speaking style. Improved articulation, pausing, and intonation control would help raise her score.\"\n\n    }\n}"}
-    </script>
+        <div th:each="partEntry : ${allPartsResults}">
+
+            <div class="part-header-container">
+                <h2 class="text-2xl font-bold" th:text="${partEntry.key}">Part 1</h2>
+                <div class="flex items-center">
+                    <span class="text-sm text-gray-300 mr-2 uppercase font-semibold">Part Score</span>
+                    <span class="text-2xl font-bold text-yellow-400 bg-gray-800 px-3 py-1 rounded"
+                          th:text="${#numbers.formatDecimal(partEntry.value.get('overall'), 1, 1)}">6.5</span>
+                </div>
+            </div>
+
+            <div class="criteria-grid">
+
+                <section class="criteria-card">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold text-gray-800">1. Fluency & Coherence</h3>
+                        <span class="text-2xl font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-md border border-indigo-100"
+                              th:text="${#numbers.formatDecimal(partEntry.value.get('fluency').get('band'), 1, 1)}">7.0</span>
+                    </div>
+
+                    <h4 class="sub-header">Assessment</h4>
+                    <pre class="assessment-text" th:text="${partEntry.value.get('fluency').get('assessment')}"></pre>
+
+                    <h4 class="sub-header text-indigo-600">Detailed Evaluation</h4>
+                    <pre class="assessment-text" th:text="${partEntry.value.get('fluency').get('evaluation')}"></pre>
+                </section>
+
+                <section class="criteria-card border-l-emerald-500" style="border-left-color: #10b981;">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold text-gray-800">2. Lexical Resource</h3>
+                        <span class="text-2xl font-black text-emerald-600 bg-emerald-50 px-3 py-1 rounded-md border border-emerald-100"
+                              th:text="${#numbers.formatDecimal(partEntry.value.get('lexical').get('band'), 1, 1)}">6.0</span>
+                    </div>
+
+                    <h4 class="sub-header">Assessment</h4>
+                    <pre class="assessment-text" th:text="${partEntry.value.get('lexical').get('assessment')}"></pre>
+
+                    <h4 class="sub-header text-emerald-600">Suggestions</h4>
+                    <pre class="assessment-text bg-emerald-50 border-emerald-100" th:text="${partEntry.value.get('lexical').get('improvement_suggestions')}"></pre>
+                </section>
+
+                <section class="criteria-card border-l-orange-500" style="border-left-color: #f59e0b;">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold text-gray-800">3. Grammatical Range</h3>
+                        <span class="text-2xl font-black text-orange-600 bg-orange-50 px-3 py-1 rounded-md border border-orange-100"
+                              th:text="${#numbers.formatDecimal(partEntry.value.get('grammar').get('band'), 1, 1)}">6.5</span>
+                    </div>
+
+                    <h4 class="sub-header">Assessment</h4>
+                    <pre class="assessment-text" th:text="${partEntry.value.get('grammar').get('assessment')}"></pre>
+
+                    <h4 class="sub-header text-orange-600">Suggestions</h4>
+                    <pre class="assessment-text bg-orange-50 border-orange-100" th:text="${partEntry.value.get('grammar').get('improvement_suggestions')}"></pre>
+                </section>
+
+                <section class="criteria-card border-l-rose-500" style="border-left-color: #f43f5e;">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold text-gray-800">4. Pronunciation</h3>
+                        <span class="text-2xl font-black text-rose-600 bg-rose-50 px-3 py-1 rounded-md border border-rose-100"
+                              th:text="${#numbers.formatDecimal(partEntry.value.get('pronunciation').get('band'), 1, 1)}">6.0</span>
+                    </div>
+
+                    <h4 class="sub-header">Assessment</h4>
+                    <pre class="assessment-text" th:text="${partEntry.value.get('pronunciation').get('assessment')}"></pre>
+
+                    <h4 class="sub-header text-rose-600">Suggestions</h4>
+                    <pre class="assessment-text bg-rose-50 border-rose-100" th:text="${partEntry.value.get('pronunciation').get('improvement_suggestions')}"></pre>
+                </section>
+
+            </div> </div> </div> <div th:unless="${finalOverallBand != null}" class="bg-red-50 border border-red-200 rounded-lg p-6 text-center mt-8">
+    <h3 class="text-xl font-bold text-red-600">❌ Grading Results Unavailable</h3>
+    <p class="text-gray-600 mt-2">We encountered an error while processing your test results.</p>
+    <a th:href="@{/speaking/tests}" class="inline-block mt-4 text-indigo-600 font-medium hover:underline">Return to Tests List</a>
 </div>
 
-<script>
-    // Mapping from JSON key to display name
-    const CRITERIA_MAP = {
-        'fluency_and_coherence': 'Fluency and Coherence',
-        'lexical_resource': 'Lexical Resource',
-        'grammatical_range_accuracy': 'Grammatical Range and Accuracy',
-        'pronunciation': 'Pronunciation'
-    };
-
-    function parseAndRenderResults() {
-        const rawJsonElement = document.getElementById('raw-json-data');
-        const rawJsonText = rawJsonElement.textContent;
-
-        let parsedOuter;
-        let innerJsonString;
-        let finalGradingMap;
-
-        try {
-            // Step 1: Parse the outer JSON
-            parsedOuter = JSON.parse(rawJsonText);
-
-            // Step 2: Extract the inner JSON string from the 'message' field
-            innerJsonString = parsedOuter.message;
-
-            // Step 3: Sanitize the inner string (replace illegal newlines with the escape sequence)
-            // This is crucial because the API provided literal \n characters inside the JSON string values.
-            // We also replace non-breaking space characters which appear in the raw output.
-            innerJsonString = innerJsonString
-                .replace(/\n/g, '\\n') // Replace literal newline with JSON escape sequence
-                .replace(/\r/g, '\\r') // Replace literal carriage return with JSON escape sequence
-                .replace(/\xA0/g, ' '); // Replace non-breaking space (code 160)
-
-            // The string might still contain extra escaped backslashes in the assessment text
-            // that look like \\n in the source, but are intended to be \n in the final output.
-            // We run a final clean-up to ensure double escapes are not accidentally introduced
-            // if the API partially escaped. For this specific output, the above replace should be sufficient.
-
-            // Step 4: Parse the cleaned inner JSON string
-            finalGradingMap = JSON.parse(innerJsonString);
-
-        } catch (e) {
-            console.error("Error parsing JSON:", e);
-            document.getElementById('criteria-container').innerHTML = `
-                <div class="p-6 bg-red-100 text-red-700 border-l-4 border-red-500 rounded-lg">
-                    <h3 class="font-bold">Parsing Error</h3>
-                    <p>Could not process the server's response due to invalid JSON formatting.</p>
-                    <p class="mt-2 text-sm text-red-500">Error details: \${e.message}</p>
-                </div>
-            `;
-            return;
-        }
-
-        // --- Render Overall Score ---
-        const overallBand = finalGradingMap.overall_band ? finalGradingMap.overall_band.toFixed(1) : 'N/A';
-        document.getElementById('overall-band').textContent = overallBand;
-
-        // --- Render Detailed Criteria ---
-        const container = document.getElementById('criteria-container');
-        container.innerHTML = ''; // Clear container
-
-        Object.keys(CRITERIA_MAP).forEach((key, index) => {
-            const criteriaData = finalGradingMap[key];
-            if (!criteriaData) return;
-
-            const criteriaTitle = CRITERIA_MAP[key];
-            const bandScore = criteriaData.band ? criteriaData.band.toFixed(1) : 'N/A';
-            const assessmentText = criteriaData.assessment || 'No detailed assessment provided.';
-
-            const criteriaHtml = `
-                <div class="p-6 bg-white rounded-xl shadow-lg border border-gray-100 transition duration-300 hover:shadow-xl">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-xl font-semibold text-gray-800">${index + 1}. ${criteriaTitle}</h3>
-                        <div class="text-3xl font-bold text-green-600 bg-green-50 px-4 py-1 rounded-full shadow-md">
-                            ${bandScore}
-                        </div>
-                    </div>
-                    <h4 class="text-md font-medium text-gray-600 mt-4 mb-2 border-t pt-3">Detailed Assessment:</h4>
-                    <div class="assessment-text text-gray-700 bg-gray-50 p-4 rounded-lg">
-                        ${assessmentText.replace(/\\n/g, '<br><br>')}
-                    </div>
-                </div>
-            `;
-            container.innerHTML += criteriaHtml;
-        });
-    }
-
-    // Run the rendering function when the window loads
-    window.onload = parseAndRenderResults;
-</script>
+</div>
 
 </body>
 </html>
