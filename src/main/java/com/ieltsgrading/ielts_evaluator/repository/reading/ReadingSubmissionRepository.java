@@ -1,4 +1,4 @@
-package com.ieltsgrading.ielts_evaluator.repository;
+package com.ieltsgrading.ielts_evaluator.repository.reading;
 
 import com.ieltsgrading.ielts_evaluator.model.*;
 import org.springframework.data.jpa.repository.JpaRepository;
