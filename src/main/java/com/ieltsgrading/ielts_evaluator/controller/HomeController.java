@@ -1,7 +1,6 @@
 package com.ieltsgrading.ielts_evaluator.controller;
 
-import com.ieltsgrading.ielts_evaluator.model.TestSubmission;
-import com.ieltsgrading.ielts_evaluator.model.User;
+import com.ieltsgrading.ielts_evaluator.model.*;
 import com.ieltsgrading.ielts_evaluator.service.TestSubmissionService;
 import com.ieltsgrading.ielts_evaluator.service.UserService;
 import jakarta.servlet.http.HttpSession;
@@ -20,8 +19,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
 /**
- * Home Controller
- * Handles homepage and dashboard routes
+ * Home Controller - UPDATED with new submission service
  */
 @Controller
 public class HomeController {
@@ -32,70 +30,52 @@ public class HomeController {
     private UserService userService;
 
     /**
-     * Homepage - Hiển thị cho cả guest và user đã đăng nhập
-     * 
-     * @return index.html (1 trang chung cho cả guest và user)
+     * Homepage
      */
     @GetMapping("/")
     public String home(Model model, HttpSession session) {
         model.addAttribute("pageTitle", "IELTS Test With AI");
 
-        // Kiểm tra trạng thái đăng nhập từ Spring Security
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         boolean isLoggedIn = auth != null && auth.isAuthenticated()
                 && !auth.getName().equals("anonymousUser");
 
         if (isLoggedIn) {
             try {
-                // Lấy user từ database dựa trên email
                 String email = auth.getName();
                 User user = userService.getUserByEmail(email);
-
-                // Đồng bộ với session
                 session.setAttribute("loggedInUser", user);
-
-                // Thêm vào model để header hiển thị đúng
                 model.addAttribute("isLoggedIn", true);
                 model.addAttribute("userName", user.getName());
                 model.addAttribute("user", user);
-
                 System.out.println("✅ User logged in: " + user.getName());
             } catch (Exception e) {
-                // Nếu không tìm thấy user, clear session
                 session.removeAttribute("loggedInUser");
                 model.addAttribute("isLoggedIn", false);
                 System.err.println("❌ Error loading user: " + e.getMessage());
             }
         } else {
-            // Guest mode
             session.removeAttribute("loggedInUser");
             model.addAttribute("isLoggedIn", false);
             System.out.println("👤 Guest accessing homepage");
         }
 
-        return "index"; // ✅ Trả về index.html cho cả guest và user
+        return "index";
     }
 
-    /**
-     * Redirect /home về /
-     * (Nếu có ai đó truy cập /home)
-     */
     @GetMapping("/home")
     public String homeRedirect() {
         return "redirect:/";
     }
 
-    /**
-     * Redirect /index về /
-     * (Nếu có ai đó truy cập /index)
-     */
     @GetMapping("/index")
     public String indexRedirect() {
         return "redirect:/";
     }
 
     /**
-     * Dashboard page - Display user's test submissions
+     * ✅ UPDATED: Dashboard page - Display user's test submissions
+     * Now uses TestSubmissionService which handles both writing & speaking
      */
     @GetMapping("/dashboard")
     public String dashboard(Model model, HttpSession session) {
@@ -114,12 +94,14 @@ public class HomeController {
             // Sync session
             session.setAttribute("loggedInUser", user);
 
-            // Get user submissions
-            List<TestSubmission> allSubmissions = submissionService.getUserSubmissions(user);
-            List<TestSubmission> processingSubmissions = new ArrayList<>();
-            List<TestSubmission> completedSubmissions = new ArrayList<>();
+            // ✅ NEW: Get submissions using unified service
+            List<ITestSubmission> allSubmissions = submissionService.getUserSubmissions(user);
+            
+            // Separate into processing and completed
+            List<ITestSubmission> processingSubmissions = new ArrayList<>();
+            List<ITestSubmission> completedSubmissions = new ArrayList<>();
 
-            for (TestSubmission submission : allSubmissions) {
+            for (ITestSubmission submission : allSubmissions) {
                 if (submission.isCompleted()) {
                     completedSubmissions.add(submission);
                 } else if (submission.isProcessing() || submission.isPending()) {
@@ -127,7 +109,7 @@ public class HomeController {
                 }
             }
 
-            // Get statistics
+            // ✅ NEW: Get statistics using unified service
             Map<String, Object> stats = submissionService.getUserStats(user);
 
             model.addAttribute("pageTitle", "Dashboard - IELTS Test With AI");
@@ -152,7 +134,8 @@ public class HomeController {
     }
 
     /**
-     * View test result detail
+     * ✅ UPDATED: View test result detail
+     * Now handles both writing and speaking submissions
      */
     @GetMapping("/result/{submissionUuid}")
     public String viewResult(
@@ -167,17 +150,19 @@ public class HomeController {
 
         try {
             User user = userService.getUserByEmail(auth.getName());
-            Optional<TestSubmission> optSubmission = submissionService.getSubmission(submissionUuid);
+            
+            // ✅ NEW: Get submission using unified service
+            Optional<ITestSubmission> optSubmission = submissionService.getSubmission(submissionUuid);
 
             if (optSubmission.isEmpty()) {
                 model.addAttribute("error", "Submission not found");
                 return "error-404";
             }
 
-            TestSubmission submission = optSubmission.get();
+            ITestSubmission submission = optSubmission.get();
 
             // Check ownership
-            if (!submission.getUser().getId().equals(user.getId())) {
+            if (!submission.getUserId().equals(user.getId())) {
                 model.addAttribute("error", "Access denied");
                 return "error-403";
             }
@@ -187,21 +172,31 @@ public class HomeController {
             model.addAttribute("isLoggedIn", true);
             model.addAttribute("submission", submission);
 
-            // Parse detailed results if completed
-            if (submission.isCompleted()) {
-                if (submission.getTask1Result() != null) {
-                    Map<String, Object> task1Detail = submissionService
-                            .parseDetailedResult(submission.getTask1Result());
-                    model.addAttribute("task1Detail", task1Detail);
+            // ✅ NEW: Route to appropriate result page based on test type
+            if ("writing".equals(submission.getTestType())) {
+                // Parse detailed results if completed
+                if (submission.isCompleted()) {
+                    WritingSubmission ws = (WritingSubmission) submission;
+                    if (ws.getTask1Result() != null) {
+                        Map<String, Object> task1Detail = submissionService
+                                .parseDetailedResult(ws.getTask1Result());
+                        model.addAttribute("task1Detail", task1Detail);
+                    }
+                    if (ws.getTask2Result() != null) {
+                        Map<String, Object> task2Detail = submissionService
+                                .parseDetailedResult(ws.getTask2Result());
+                        model.addAttribute("task2Detail", task2Detail);
+                    }
                 }
-                if (submission.getTask2Result() != null) {
-                    Map<String, Object> task2Detail = submissionService
-                            .parseDetailedResult(submission.getTask2Result());
-                    model.addAttribute("task2Detail", task2Detail);
-                }
+                return "writing-result";
+                
+            } else if ("speaking".equals(submission.getTestType())) {
+                return "speaking-result";
+                
+            } else {
+                model.addAttribute("error", "Unknown test type: " + submission.getTestType());
+                return "error";
             }
-
-            return "test-result";
 
         } catch (Exception e) {
             System.err.println("❌ Error loading result: " + e.getMessage());
@@ -212,13 +207,10 @@ public class HomeController {
     }
 
     /**
-     * Require login page - Thông báo cần đăng nhập
-     * 
-     * @return require-login.html
+     * Require login page
      */
     @GetMapping("/require-login")
     public String requireLogin(Model model, HttpSession session) {
-        // Nếu đã đăng nhập rồi, redirect về trang chủ
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.isAuthenticated() && !auth.getName().equals("anonymousUser")) {
             System.out.println("🔄 Already logged in, redirecting to homepage");
@@ -231,8 +223,6 @@ public class HomeController {
 
     /**
      * About page
-     * 
-     * @return about.html
      */
     @GetMapping("/about")
     public String about(Model model, HttpSession session) {
@@ -258,8 +248,6 @@ public class HomeController {
 
     /**
      * Contact page
-     * 
-     * @return contact.html
      */
     @GetMapping("/contact")
     public String contact(Model model, HttpSession session) {
@@ -281,25 +269,5 @@ public class HomeController {
         }
 
         return "contact";
-    }
-
-    /**
-     * Helper method: Sync user to session from Spring Security
-     * (Có thể dùng lại ở các controller khác)
-     */
-    private void syncUserToSession(HttpSession session) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.isAuthenticated() && !auth.getName().equals("anonymousUser")) {
-            try {
-                User user = userService.getUserByEmail(auth.getName());
-                session.setAttribute("loggedInUser", user);
-                System.out.println("🔄 Session synced for: " + user.getName());
-            } catch (Exception e) {
-                session.removeAttribute("loggedInUser");
-                System.err.println("❌ Sync failed: " + e.getMessage());
-            }
-        } else {
-            session.removeAttribute("loggedInUser");
-        }
     }
 }

@@ -190,7 +190,6 @@ public class AuthController {
         try {
             User user = userService.getUserByEmail(email);
             
-            // Đồng bộ user vào session (để tương thích với code cũ)
             session.setAttribute("loggedInUser", user);
             
             model.addAttribute("user", user);
