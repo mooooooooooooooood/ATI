@@ -192,30 +192,119 @@
     <script th:src="@{/js/dashboard.js}"></script>
     
     <script th:inline="javascript">
-        /*<![CDATA[*/
-        // Auto-refresh for processing submissions
-        const processingCount = /*[[${processingSubmissions.size()}]]*/ 0;
+    /*<![CDATA[*/
+    // ✅ Auto-refresh for processing submissions
+    const processingCount = /*[[${processingSubmissions.size()}]]*/ 0;
+    
+    console.log('📊 Dashboard loaded');
+    console.log('   Processing submissions:', processingCount);
+    
+    if (processingCount > 0) {
+        console.log('🔄 Found ' + processingCount + ' processing submissions');
+        console.log('⏰ Will auto-refresh every 10 seconds...');
         
-        if (processingCount > 0) {
-            console.log('🔄 Found ' + processingCount + ' processing submissions');
-            // Refresh page every 10 seconds to check status
-            setTimeout(() => {
-                console.log('🔄 Refreshing dashboard to check status...');
-                window.location.reload();
-            }, 10000);
-        }
+        // ✅ Auto-refresh every 10 seconds while there are processing submissions
+        const refreshInterval = setInterval(() => {
+            console.log('🔄 Auto-refreshing dashboard to check status...');
+            window.location.reload();
+        }, 10000); // 10 seconds
         
-        // ✅ View result function - supports both writing and speaking
-        function viewResult(submissionUuid, testType) {
-            if (testType === 'writing') {
-                window.location.href = '/result/' + submissionUuid;
-            } else if (testType === 'speaking') {
-                window.location.href = '/speaking/result/' + submissionUuid;
-            } else {
-                window.location.href = '/result/' + submissionUuid;
-            }
+        // Store interval ID in case we need to clear it
+        window.dashboardRefreshInterval = refreshInterval;
+    } else {
+        console.log('✅ No processing submissions - no auto-refresh needed');
+    }
+    
+    // ✅ View result function - supports both writing and speaking
+    function viewResult(submissionUuid, testType) {
+        console.log('👁️ Viewing result:', submissionUuid, 'Type:', testType);
+        
+        if (testType === 'writing') {
+            window.location.href = '/result/' + submissionUuid;
+        } else if (testType === 'speaking') {
+            window.location.href = '/speaking/result/' + submissionUuid;
+        } else {
+            // Fallback
+            window.location.href = '/result/' + submissionUuid;
         }
-        /*]]>*/
-    </script>
+    }
+    
+    // ✅ Clean up interval when page is hidden (optional optimization)
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden && window.dashboardRefreshInterval) {
+            console.log('⏸️ Page hidden - pausing auto-refresh');
+            clearInterval(window.dashboardRefreshInterval);
+        } else if (!document.hidden && processingCount > 0) {
+            console.log('▶️ Page visible - resuming auto-refresh');
+            window.location.reload(); // Reload immediately when returning
+        }
+    });
+    
+    // ✅ Show notification if just submitted
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('submitted') === 'true') {
+        console.log('✅ Test submitted successfully!');
+        
+        // Optional: Show a toast notification
+        const toast = document.createElement('div');
+        toast.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            z-index: 10000;
+            animation: slideIn 0.5s ease;
+        `;
+        toast.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <div style="font-size: 32px;">✅</div>
+                <div>
+                    <div style="font-weight: 600; margin-bottom: 5px;">Test Submitted!</div>
+                    <div style="font-size: 14px; opacity: 0.9;">Your test is being graded...</div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(toast);
+        
+        // Remove toast after 5 seconds
+        setTimeout(() => {
+            toast.style.animation = 'slideOut 0.5s ease';
+            setTimeout(() => toast.remove(), 500);
+        }, 5000);
+        
+        // Clean URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
+    /*]]>*/
+</script>
+
+<style>
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateX(100%);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+    
+    @keyframes slideOut {
+        from {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        to {
+            opacity: 0;
+            transform: translateX(100%);
+        }
+    }
+</style>
 </body>
 </html>

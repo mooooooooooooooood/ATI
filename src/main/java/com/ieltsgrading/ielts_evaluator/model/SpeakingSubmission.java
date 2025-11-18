@@ -1,5 +1,6 @@
 package com.ieltsgrading.ielts_evaluator.model;
 
+import com.ieltsgrading.ielts_evaluator.model.speaking.SpeakingTest;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -8,7 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Speaking Submission Entity - Implements ITestSubmission
- * FIXED: Compatible with speaking_tests table structure
+ * FIXED: Now uses SpeakingTest (not IeltsSpeakingTest)
  */
 @Entity
 @Table(name = "speaking_submission")
@@ -27,10 +28,11 @@ public class SpeakingSubmission implements ITestSubmission {
     private User user;
 
     @Column(name = "test_id", nullable = false)
-    private Long testId;  // CHANGED: Integer -> Long to match speaking_tests.test_id
+    private Integer testId;
 
+    // ✅ FIXED: Changed from IeltsSpeakingTest to SpeakingTest
     @Transient
-    private IeltsSpeakingTest test;
+    private SpeakingTest test;
 
     // Speaking specific fields
     @Column(name = "audio_url", length = 500)
@@ -90,22 +92,18 @@ public class SpeakingSubmission implements ITestSubmission {
 
     @Override
     public Integer getTestId() {
-        // FIXED: Convert Long to Integer for interface compatibility
-        return testId != null ? testId.intValue() : null;
+        return testId;
     }
 
-    /**
-     * Get test ID as Long (for internal use)
-     */
-    public Long getTestIdLong() {
-        return testId;
+    public void setTestId(Integer testId) {
+        this.testId = testId;
     }
 
     @Override
     public String getTestDisplayName() {
         if (test != null) {
-            // FIXED: Use test.getTestDate() instead of non-existent getCamNumber()
-            return test.getTestTitle();
+            // ✅ FIXED: Use SpeakingTest methods
+            return "Speaking Test - " + test.getTestDate() + " (" + test.getMainTopic() + ")";
         }
         return "Speaking Test #" + testId;
     }
@@ -117,25 +115,37 @@ public class SpeakingSubmission implements ITestSubmission {
 
     @Override
     public String getStatusDisplay() {
-        if (status == null) return "Unknown";
+        if (status == null)
+            return "Unknown";
         switch (status.toLowerCase()) {
-            case "completed": return "Completed";
-            case "processing": return "Processing";
-            case "pending": return "Pending";
-            case "failed": return "Failed";
-            default: return status.substring(0, 1).toUpperCase() + status.substring(1);
+            case "completed":
+                return "Completed";
+            case "processing":
+                return "Processing";
+            case "pending":
+                return "Pending";
+            case "failed":
+                return "Failed";
+            default:
+                return status.substring(0, 1).toUpperCase() + status.substring(1);
         }
     }
 
     @Override
     public String getStatusColor() {
-        if (status == null) return "#999";
+        if (status == null)
+            return "#999";
         switch (status.toLowerCase()) {
-            case "completed": return "#4caf50";
-            case "processing": return "#2196f3";
-            case "pending": return "#ff9800";
-            case "failed": return "#f44336";
-            default: return "#999";
+            case "completed":
+                return "#4caf50";
+            case "processing":
+                return "#2196f3";
+            case "pending":
+                return "#ff9800";
+            case "failed":
+                return "#f44336";
+            default:
+                return "#999";
         }
     }
 
@@ -200,7 +210,8 @@ public class SpeakingSubmission implements ITestSubmission {
     /* ==================== Helper Methods ==================== */
 
     private Map<String, Object> parseJson(String json) {
-        if (json == null || json.isEmpty()) return new HashMap<>();
+        if (json == null || json.isEmpty())
+            return new HashMap<>();
         try {
             ObjectMapper mapper = new ObjectMapper();
             return mapper.readValue(json, Map.class);
@@ -220,7 +231,7 @@ public class SpeakingSubmission implements ITestSubmission {
     public Map<String, Double> getSpeakingScores() {
         Map<String, Object> result = getSpeakingResultMap();
         Map<String, Double> scores = new HashMap<>();
-        
+
         // Extract individual scores
         if (result.containsKey("fluency")) {
             scores.put("fluency", getDoubleValue(result.get("fluency")));
@@ -234,12 +245,13 @@ public class SpeakingSubmission implements ITestSubmission {
         if (result.containsKey("pronunciation")) {
             scores.put("pronunciation", getDoubleValue(result.get("pronunciation")));
         }
-        
+
         return scores;
     }
 
     private Double getDoubleValue(Object value) {
-        if (value == null) return 0.0;
+        if (value == null)
+            return 0.0;
         if (value instanceof Number) {
             return ((Number) value).doubleValue();
         }
@@ -264,22 +276,12 @@ public class SpeakingSubmission implements ITestSubmission {
         this.user = user;
     }
 
-    public void setTestId(Long testId) {
-        this.testId = testId;
-    }
-
-    /**
-     * Set test ID from Integer (for interface compatibility)
-     */
-    public void setTestId(Integer testId) {
-        this.testId = testId != null ? testId.longValue() : null;
-    }
-
-    public IeltsSpeakingTest getTest() {
+    // ✅ FIXED: Changed from IeltsSpeakingTest to SpeakingTest
+    public SpeakingTest getTest() {
         return test;
     }
 
-    public void setTest(IeltsSpeakingTest test) {
+    public void setTest(SpeakingTest test) {
         this.test = test;
     }
 
@@ -340,5 +342,9 @@ public class SpeakingSubmission implements ITestSubmission {
                 ", status='" + status + '\'' +
                 ", score=" + overallScore +
                 '}';
+    }
+
+    public void setUserId(Long id) {
+        throw new UnsupportedOperationException("Use setUser() instead");
     }
 }

@@ -18,80 +18,100 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    @Autowired
-    private CustomUserDetailsService userDetailsService;
+        @Autowired
+        private CustomUserDetailsService userDetailsService;
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+        @Bean
+        public PasswordEncoder passwordEncoder() {
+                return new BCryptPasswordEncoder();
+        }
 
-    @Bean
-    public DaoAuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-        authProvider.setUserDetailsService(userDetailsService);
-        authProvider.setPasswordEncoder(passwordEncoder());
-        return authProvider;
-    }
+        @Bean
+        public DaoAuthenticationProvider authenticationProvider() {
+                DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+                authProvider.setUserDetailsService(userDetailsService);
+                authProvider.setPasswordEncoder(passwordEncoder());
+                return authProvider;
+        }
 
-    @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
-        return authConfig.getAuthenticationManager();
-    }
+        @Bean
+        public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
+                return authConfig.getAuthenticationManager();
+        }
 
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-                .csrf(csrf -> csrf
-                        // ⭐ CRITICAL FIX: Ignore CSRF token validation for the asynchronous POST endpoint
-                        .ignoringRequestMatchers("/reading/tests/get-explanation")
-                )
-                .authorizeHttpRequests(auth -> auth
-                        // Public resources
-                        .requestMatchers("/", "/home", "/index").permitAll()
-                        .requestMatchers("/user/login", "/user/signup", "/user/register").permitAll()
-                        .requestMatchers("/user/forgot-password", "/user/reset-password").permitAll()
-                        .requestMatchers("/user/verify-email").permitAll()
-                        .requestMatchers("/css/**", "/js/**", "/images/**", "/fonts/**").permitAll()
-                        .requestMatchers("/error").permitAll()
+        @Bean
+        public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+                http
+                                .csrf(csrf -> csrf
+                                                // ✅ CRITICAL FIX: Ignore CSRF for upload and async endpoints
+                                                .ignoringRequestMatchers(
+                                                                "/reading/tests/get-explanation",
+                                                                "/api/upload/**", // ← Audio upload
+                                                                "/api/submission/**" // ← Submission status check (nếu
+                                                                                     // cần)
+                                                ))
+                                .authorizeHttpRequests(auth -> auth
+                                                // Public resources
+                                                .requestMatchers("/", "/home", "/index").permitAll()
+                                                .requestMatchers("/user/login", "/user/signup", "/user/register")
+                                                .permitAll()
+                                                .requestMatchers("/user/forgot-password", "/user/reset-password")
+                                                .permitAll()
+                                                .requestMatchers("/user/verify-email").permitAll()
+                                                .requestMatchers("/css/**", "/js/**", "/images/**", "/fonts/**")
+                                                .permitAll()
+                                                .requestMatchers("/error").permitAll()
 
-                        // Explicitly permit the explanation endpoint
-                        .requestMatchers(HttpMethod.POST, "/reading/tests/get-explanation").permitAll()
+                                                // ✅ API endpoints - Permit upload and submission endpoints
+                                                .requestMatchers(HttpMethod.POST, "/reading/tests/get-explanation")
+                                                .permitAll()
+                                                .requestMatchers(HttpMethod.POST, "/api/upload/**").permitAll()
+                                                .requestMatchers(HttpMethod.GET, "/api/submission/*/status")
+                                                .authenticated()
 
-                        // Require login redirect
-                        .requestMatchers("/require-login").permitAll()
+                                                // Require login redirect
+                                                .requestMatchers("/require-login").permitAll()
 
-                        // Protected resources
-                        .requestMatchers("/dashboard/**", "/profile/**").authenticated()
-                        .requestMatchers("/test/**").authenticated()
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
+                                                // ✅ Speaking routes - Require authentication
+                                                .requestMatchers("/speaking/**").authenticated()
 
-                        // All other requests require authentication
-                        .anyRequest().authenticated())
-                .formLogin(form -> form
-                        .loginPage("/user/login")
-                        .loginProcessingUrl("/user/login")
-                        .defaultSuccessUrl("/", false)
-                        .failureUrl("/user/login?error=true")
-                        .usernameParameter("email")
-                        .passwordParameter("password")
-                        .permitAll())
-                .logout(logout -> logout
-                        .logoutUrl("/user/logout")
-                        .logoutSuccessUrl("/user/login?logout=true")
-                        .invalidateHttpSession(true)
-                        .deleteCookies("JSESSIONID")
-                        .permitAll())
-                .rememberMe(remember -> remember
-                        .key("uniqueAndSecret")
-                        .tokenValiditySeconds(86400) // 24 hours
-                        .userDetailsService(userDetailsService))
-                .exceptionHandling(exception -> exception
-                        .accessDeniedPage("/error/403"))
-                .sessionManagement(session -> session
-                        .maximumSessions(1)
-                        .expiredUrl("/user/login?expired=true"));
+                                                // ✅ Writing routes - Require authentication
+                                                .requestMatchers("/writing/**").authenticated()
 
-        return http.build();
-    }
+                                                // ✅ Result pages - Require authentication
+                                                .requestMatchers("/result/**").authenticated()
+
+                                                // Protected resources
+                                                .requestMatchers("/dashboard/**", "/profile/**").authenticated()
+                                                .requestMatchers("/test/**").authenticated()
+                                                .requestMatchers("/admin/**").hasRole("ADMIN")
+
+                                                // All other requests require authentication
+                                                .anyRequest().authenticated())
+                                .formLogin(form -> form
+                                                .loginPage("/user/login")
+                                                .loginProcessingUrl("/user/login")
+                                                .defaultSuccessUrl("/", false)
+                                                .failureUrl("/user/login?error=true")
+                                                .usernameParameter("email")
+                                                .passwordParameter("password")
+                                                .permitAll())
+                                .logout(logout -> logout
+                                                .logoutUrl("/user/logout")
+                                                .logoutSuccessUrl("/user/login?logout=true")
+                                                .invalidateHttpSession(true)
+                                                .deleteCookies("JSESSIONID")
+                                                .permitAll())
+                                .rememberMe(remember -> remember
+                                                .key("uniqueAndSecret")
+                                                .tokenValiditySeconds(86400) // 24 hours
+                                                .userDetailsService(userDetailsService))
+                                .exceptionHandling(exception -> exception
+                                                .accessDeniedPage("/error/403"))
+                                .sessionManagement(session -> session
+                                                .maximumSessions(1)
+                                                .expiredUrl("/user/login?expired=true"));
+
+                return http.build();
+        }
 }
