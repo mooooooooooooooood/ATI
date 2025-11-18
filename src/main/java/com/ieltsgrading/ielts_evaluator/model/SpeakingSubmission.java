@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Speaking Submission Entity - Implements ITestSubmission
+ * FIXED: Compatible with speaking_tests table structure
  */
 @Entity
 @Table(name = "speaking_submission")
@@ -26,7 +27,7 @@ public class SpeakingSubmission implements ITestSubmission {
     private User user;
 
     @Column(name = "test_id", nullable = false)
-    private Integer testId;
+    private Long testId;  // CHANGED: Integer -> Long to match speaking_tests.test_id
 
     @Transient
     private IeltsSpeakingTest test;
@@ -89,15 +90,24 @@ public class SpeakingSubmission implements ITestSubmission {
 
     @Override
     public Integer getTestId() {
+        // FIXED: Convert Long to Integer for interface compatibility
+        return testId != null ? testId.intValue() : null;
+    }
+
+    /**
+     * Get test ID as Long (for internal use)
+     */
+    public Long getTestIdLong() {
         return testId;
     }
 
     @Override
     public String getTestDisplayName() {
         if (test != null) {
-            return "CAM " + test.getCamNumber() + " - Speaking Test " + test.getTestNumber();
+            // FIXED: Use test.getTestDate() instead of non-existent getCamNumber()
+            return test.getTitle();
         }
-        return "Speaking Test";
+        return "Speaking Test #" + testId;
     }
 
     @Override
@@ -204,6 +214,42 @@ public class SpeakingSubmission implements ITestSubmission {
         return parseJson(speakingResult);
     }
 
+    /**
+     * Get speaking scores breakdown
+     */
+    public Map<String, Double> getSpeakingScores() {
+        Map<String, Object> result = getSpeakingResultMap();
+        Map<String, Double> scores = new HashMap<>();
+        
+        // Extract individual scores
+        if (result.containsKey("fluency")) {
+            scores.put("fluency", getDoubleValue(result.get("fluency")));
+        }
+        if (result.containsKey("lexicalResource")) {
+            scores.put("lexicalResource", getDoubleValue(result.get("lexicalResource")));
+        }
+        if (result.containsKey("grammaticalRange")) {
+            scores.put("grammaticalRange", getDoubleValue(result.get("grammaticalRange")));
+        }
+        if (result.containsKey("pronunciation")) {
+            scores.put("pronunciation", getDoubleValue(result.get("pronunciation")));
+        }
+        
+        return scores;
+    }
+
+    private Double getDoubleValue(Object value) {
+        if (value == null) return 0.0;
+        if (value instanceof Number) {
+            return ((Number) value).doubleValue();
+        }
+        try {
+            return Double.parseDouble(value.toString());
+        } catch (NumberFormatException e) {
+            return 0.0;
+        }
+    }
+
     /* ==================== Getters & Setters ==================== */
 
     public void setSubmissionId(Long submissionId) {
@@ -218,8 +264,15 @@ public class SpeakingSubmission implements ITestSubmission {
         this.user = user;
     }
 
-    public void setTestId(Integer testId) {
+    public void setTestId(Long testId) {
         this.testId = testId;
+    }
+
+    /**
+     * Set test ID from Integer (for interface compatibility)
+     */
+    public void setTestId(Integer testId) {
+        this.testId = testId != null ? testId.longValue() : null;
     }
 
     public IeltsSpeakingTest getTest() {

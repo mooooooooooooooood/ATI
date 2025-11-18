@@ -24,26 +24,37 @@
                     <div class="filter-section">
                         <h3>Search</h3>
                         <div class="search-box-sidebar">
-                            <input type="text" placeholder="Search" id="sidebarSearch"
+                            <input type="text" 
+                                   placeholder="Search" 
+                                   id="sidebarSearch"
                                    th:value="${searchQuery}">
-                            <button>🔍</button>
+                            <button onclick="performSearch()">🔍</button>
                         </div>
                     </div>
                    
                     <div class="filter-section">
                         <h3>Sort</h3>
                         <label class="radio-option">
-                            <input type="radio" name="sort" value="newest"
+                            <input type="radio" 
+                                   name="sort" 
+                                   value="newest"
+                                   onchange="changeSortOrder('newest')"
                                    th:checked="${currentSort == 'newest' or currentSort == null}">
                             <span>Newest</span>
                         </label>
                         <label class="radio-option">
-                            <input type="radio" name="sort" value="oldest"
+                            <input type="radio" 
+                                   name="sort" 
+                                   value="oldest"
+                                   onchange="changeSortOrder('oldest')"
                                    th:checked="${currentSort == 'oldest'}">
                             <span>Oldest</span>
                         </label>
                         <label class="radio-option">
-                            <input type="radio" name="sort" value="most-attempted"
+                            <input type="radio" 
+                                   name="sort" 
+                                   value="most-attempted"
+                                   onchange="changeSortOrder('most-attempted')"
                                    th:checked="${currentSort == 'most-attempted'}">
                             <span>Most attempted</span>
                         </label>
@@ -55,25 +66,23 @@
                     <!-- Tests from backend -->
                     <div class="test-card"
                          th:each="test : ${tests}"
-                         th:attr="data-bg=${test.background},
-                                  data-test-id=${test.id},
-                                  data-cam=${test.cam},
-                                  data-test-number=${test.testNumber}">
+                         th:style="'background: ' + ${test.background} + ';'">
                         <div class="test-thumbnail">
                             <img th:src="@{/images/speaking.png}"
                                  th:alt="${test.title}"
                                  onerror="this.src='/images/Logo.png'">
                         </div>
-                        <h3 th:text="${test.title}">CAM 20 - Speaking Test 1</h3>
-                        <p class="test-views" th:text="${test.views}">33K lượt làm</p>
+                        <h3 th:text="${test.title}">Speaking Test 1</h3>
+                        <p class="test-description" th:text="${test.mainTopic}">Test topic</p>
+                        <p class="test-views" th:text="${test.views}">1K lượt làm</p>
                         <button class="btn-do-test"
-                                th:onclick="|startSpeakingTest('${test.id}')|">
+                                th:onclick="'window.location.href=\'/speaking/test/' + ${test.testId} + '\''">
                             <span class="icon">▶</span> Do the test
                         </button>
                     </div>
                    
                     <!-- Show message if no tests -->
-                    <div th:if="${#lists.isEmpty(tests)}"
+                    <div th:if="${tests == null or #lists.isEmpty(tests)}"
                          style="grid-column: 1 / -1; text-align: center; padding: 60px 20px;">
                         <h3 style="font-size: 24px; color: #666; margin-bottom: 10px;">
                             🎤 No speaking tests available
@@ -87,24 +96,32 @@
 
             <!-- Pagination -->
             <div class="pagination" th:if="${totalPages > 1}">
-                <button class="page-btn" th:disabled="${!hasPrevious}">‹</button>
+                <button class="page-btn" 
+                        th:disabled="${!hasPrevious}"
+                        th:onclick="'goToPage(' + ${previousPage} + ')'">‹</button>
                
                 <!-- Dynamic page numbers -->
                 <th:block th:each="i : ${#numbers.sequence(1, totalPages > 5 ? 5 : totalPages)}">
                     <button class="page-btn"
                             th:classappend="${i == currentPage} ? 'active' : ''"
-                            th:text="${i}">1</button>
+                            th:text="${i}"
+                            th:onclick="'goToPage(' + ${i} + ')'">1</button>
                 </th:block>
                
                 <span th:if="${totalPages > 5}">...</span>
-                <button class="page-btn" th:if="${totalPages > 5}"
-                        th:text="${totalPages}">20</button>
+                <button class="page-btn" 
+                        th:if="${totalPages > 5}"
+                        th:text="${totalPages}"
+                        th:onclick="'goToPage(' + ${totalPages} + ')'">20</button>
                
-                <button class="page-btn" th:disabled="${!hasNext}">›</button>
+                <button class="page-btn" 
+                        th:disabled="${!hasNext}"
+                        th:onclick="'goToPage(' + ${nextPage} + ')'">›</button>
             </div>
            
             <!-- Test Statistics -->
-            <div class="test-stats" th:if="${totalTests > 0}"
+            <div class="test-stats" 
+                 th:if="${totalTests != null and totalTests > 0}"
                  style="text-align: center; margin-top: 20px; color: #666;">
                 <p>Showing <span th:text="${tests.size()}">16</span> of
                    <span th:text="${totalTests}">80</span> speaking tests</p>
@@ -118,9 +135,7 @@
     <!-- Scripts -->
     <script th:src="@{/js/header.js}" defer></script>
     <script th:src="@{/js/main.js}"></script>
-    <script th:src="@{/js/speaking-test-collection.js}"></script>
    
-    <!-- Pass server data to JavaScript -->
     <script th:inline="javascript">
         /*<![CDATA[*/
         window.serverData = {
@@ -131,15 +146,45 @@
             totalTests: /*[[${totalTests}]]*/ 0
         };
        
-        // Update JavaScript variables with server data
-        if (window.serverData) {
-            currentPage = window.serverData.currentPage;
-            totalPages = window.serverData.totalPages;
-            currentSort = window.serverData.currentSort;
-            searchQuery = window.serverData.searchQuery;
+        function goToPage(page) {
+            const sort = window.serverData.currentSort || 'newest';
+            const search = window.serverData.searchQuery || '';
+            let url = '/speaking/tests?page=' + page + '&sort=' + sort;
+            if (search) {
+                url += '&search=' + encodeURIComponent(search);
+            }
+            window.location.href = url;
         }
+        
+        function changeSortOrder(sortValue) {
+            const search = window.serverData.searchQuery || '';
+            let url = '/speaking/tests?sort=' + sortValue;
+            if (search) {
+                url += '&search=' + encodeURIComponent(search);
+            }
+            window.location.href = url;
+        }
+        
+        function performSearch() {
+            const searchInput = document.getElementById('sidebarSearch');
+            const searchValue = searchInput.value.trim();
+            const sort = window.serverData.currentSort || 'newest';
+            let url = '/speaking/tests?sort=' + sort;
+            if (searchValue) {
+                url += '&search=' + encodeURIComponent(searchValue);
+            }
+            window.location.href = url;
+        }
+        
+        // Allow Enter key to search
+        document.getElementById('sidebarSearch').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                performSearch();
+            }
+        });
        
-        console.log('Server data loaded:', window.serverData);
+        console.log('✅ Speaking tests page loaded');
+        console.log('Server data:', window.serverData);
         /*]]>*/
     </script>
 </body>

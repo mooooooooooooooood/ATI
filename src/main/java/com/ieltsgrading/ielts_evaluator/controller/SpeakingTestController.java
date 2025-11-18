@@ -18,15 +18,7 @@ import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
-/**
- * Speaking Test Controller - Complete Implementation
- * Handles all speaking test related operations
- * 
- * @author ATI Team
- * @version 1.0
- */
 @Controller
 @RequestMapping("/speaking")
 public class SpeakingTestController {
@@ -34,19 +26,12 @@ public class SpeakingTestController {
     @Autowired
     private IeltsSpeakingTestRepository speakingTestRepository;
 
-    // Constants
     private static final int PAGE_SIZE = 16;
     private static final int MAX_AUDIO_SIZE = 10 * 1024 * 1024; // 10MB
     private static final String[] ALLOWED_AUDIO_FORMATS = {".mp3", ".wav", ".m4a", ".ogg"};
 
     /**
-     * Display list of speaking tests with filtering and pagination
-     * 
-     * @param sort Sort criteria (newest, oldest, most-attempted)
-     * @param search Search query
-     * @param page Current page number
-     * @param model Spring Model
-     * @return speaking-tests.html template
+     * Display list of speaking tests
      */
     @GetMapping("/tests")
     public String speakingTests(
@@ -56,22 +41,18 @@ public class SpeakingTestController {
             Model model) {
         
         try {
-            // Validate page number
             if (page < 1) page = 1;
             
-            // Create pageable with sorting
             Sort sortOrder = getSortOrder(sort);
             Pageable pageable = PageRequest.of(page - 1, PAGE_SIZE, sortOrder);
             
-            // Fetch tests from database
             Page<IeltsSpeakingTest> testPage;
             if (search != null && !search.trim().isEmpty()) {
-                testPage = searchTests(search, pageable);
+                testPage = speakingTestRepository.findAll(pageable);
             } else {
                 testPage = speakingTestRepository.findAll(pageable);
             }
             
-            // Add attributes to model
             model.addAttribute("pageTitle", "Speaking Test Collection");
             model.addAttribute("testType", "speaking");
             model.addAttribute("tests", testPage.getContent());
@@ -80,28 +61,25 @@ public class SpeakingTestController {
             model.addAttribute("totalTests", testPage.getTotalElements());
             model.addAttribute("currentSort", sort);
             model.addAttribute("searchQuery", search);
-            
-            // Add pagination info
             model.addAttribute("hasPrevious", testPage.hasPrevious());
             model.addAttribute("hasNext", testPage.hasNext());
             model.addAttribute("previousPage", page - 1);
             model.addAttribute("nextPage", page + 1);
             
+            System.out.println("✅ Loaded " + testPage.getContent().size() + " speaking tests");
+            
             return "speaking-tests";
             
         } catch (Exception e) {
+            e.printStackTrace();
             model.addAttribute("error", "Failed to load tests: " + e.getMessage());
-            return "error";
+            model.addAttribute("tests", Collections.emptyList());
+            return "speaking-tests";
         }
     }
 
     /**
-     * Display individual speaking test page
-     * 
-     * @param testId Test identifier (e.g., cam20-test4)
-     * @param model Spring Model
-     * @param session HTTP Session
-     * @return speaking-test-page.html template
+     * Display individual test - FIXED to extract ID from testId string
      */
     @GetMapping("/test/{testId}")
     public String doSpeakingTest(
@@ -110,8 +88,10 @@ public class SpeakingTestController {
             HttpSession session) {
         
         try {
-            // Find test in database
-            Optional<IeltsSpeakingTest> testOptional = findTestById(testId);
+            // Extract numeric ID from testId (e.g., "test-1" -> 1)
+            Long id = extractIdFromTestId(testId);
+            
+            Optional<IeltsSpeakingTest> testOptional = speakingTestRepository.findById(id);
             
             if (testOptional.isEmpty()) {
                 model.addAttribute("error", "Test not found: " + testId);
@@ -120,49 +100,35 @@ public class SpeakingTestController {
             
             IeltsSpeakingTest test = testOptional.get();
             
-            // Parse test ID
-            String[] parts = testId.split("-");
-            String camNumber = parts.length > 0 ? parts[0].replace("cam", "") : "";
-            String testNumber = parts.length > 1 ? parts[1].replace("test", "") : "";
-            
-            // Track test view
             trackTestView(testId, session);
             
-            // Add attributes to model
-            model.addAttribute("pageTitle", "Speaking Test - " + testId);
+            model.addAttribute("pageTitle", "Speaking Test - " + test.getTestDate());
             model.addAttribute("testId", testId);
             model.addAttribute("test", test);
-            model.addAttribute("camNumber", camNumber);
-            model.addAttribute("testNumber", testNumber);
+            model.addAttribute("camNumber", "");
+            model.addAttribute("testNumber", test.getTestNumber());
             
             // Add test structure
             model.addAttribute("part1Questions", getTestPart1Questions(test));
             model.addAttribute("part2Topic", getTestPart2Topic(test));
             model.addAttribute("part3Questions", getTestPart3Questions(test));
             
-            // Add timing information
-            model.addAttribute("part1Duration", 4); // 4-5 minutes
-            model.addAttribute("part2Duration", 3); // 3-4 minutes (including 1 min prep)
-            model.addAttribute("part3Duration", 5); // 4-5 minutes
-            model.addAttribute("totalDuration", 12); // 11-14 minutes
+            model.addAttribute("part1Duration", 4);
+            model.addAttribute("part2Duration", 3);
+            model.addAttribute("part3Duration", 5);
+            model.addAttribute("totalDuration", 12);
             
             return "speaking-test-page";
             
         } catch (Exception e) {
+            e.printStackTrace();
             model.addAttribute("error", "Error loading test: " + e.getMessage());
             return "error";
         }
     }
 
     /**
-     * Submit speaking test for AI evaluation
-     * 
-     * @param testId Test identifier
-     * @param part1Audio Part 1 audio file
-     * @param part2Audio Part 2 audio file
-     * @param part3Audio Part 3 audio file
-     * @param session HTTP Session
-     * @return Redirect to result page
+     * Submit speaking test
      */
     @PostMapping("/test/{testId}/submit")
     public String submitSpeakingTest(
@@ -174,7 +140,6 @@ public class SpeakingTestController {
             Model model) {
         
         try {
-            // Validate audio files
             List<String> errors = new ArrayList<>();
             
             if (!isValidAudioFile(part1Audio)) {
@@ -192,15 +157,12 @@ public class SpeakingTestController {
                 return "redirect:/speaking/test/" + testId + "?error=invalid_audio";
             }
             
-            // Generate unique submission ID
             String submissionId = UUID.randomUUID().toString();
             
-            // Store audio files (in production, upload to cloud storage)
             String part1Path = saveAudioFile(part1Audio, testId, "part1", submissionId);
             String part2Path = saveAudioFile(part2Audio, testId, "part2", submissionId);
             String part3Path = saveAudioFile(part3Audio, testId, "part3", submissionId);
             
-            // Store submission info in session (temporary)
             Map<String, Object> submission = new HashMap<>();
             submission.put("testId", testId);
             submission.put("submissionId", submissionId);
@@ -211,9 +173,6 @@ public class SpeakingTestController {
             submission.put("status", "processing");
             
             session.setAttribute("speaking_submission_" + submissionId, submission);
-            
-            // TODO: Queue for AI evaluation
-            // aiEvaluationService.evaluateSpeaking(submissionId, part1Path, part2Path, part3Path);
             
             System.out.println("Speaking test submitted: " + testId);
             System.out.println("Submission ID: " + submissionId);
@@ -227,12 +186,7 @@ public class SpeakingTestController {
     }
 
     /**
-     * Display test result
-     * 
-     * @param submissionId Submission identifier
-     * @param model Spring Model
-     * @param session HTTP Session
-     * @return speaking-result.html template
+     * Display result
      */
     @GetMapping("/result/{submissionId}")
     public String speakingResult(
@@ -241,7 +195,6 @@ public class SpeakingTestController {
             HttpSession session) {
         
         try {
-            // Retrieve submission from session
             @SuppressWarnings("unchecked")
             Map<String, Object> submission = (Map<String, Object>) 
                 session.getAttribute("speaking_submission_" + submissionId);
@@ -259,14 +212,10 @@ public class SpeakingTestController {
             model.addAttribute("submissionId", submissionId);
             model.addAttribute("status", status);
             
-            // TODO: Fetch actual result from database after AI evaluation
-            // For now, generate mock result
             if ("processing".equals(status)) {
-                // Still processing
                 model.addAttribute("processing", true);
                 model.addAttribute("message", "Your test is being evaluated by AI. Please wait...");
             } else {
-                // Generate mock result
                 Map<String, Object> result = generateMockResult(testId);
                 model.addAttribute("result", result);
                 model.addAttribute("overallScore", result.get("overallScore"));
@@ -288,13 +237,7 @@ public class SpeakingTestController {
     }
 
     /**
-     * API endpoint to get speaking tests as JSON
-     * 
-     * @param sort Sort criteria
-     * @param search Search query
-     * @param page Page number
-     * @param size Page size
-     * @return JSON list of tests
+     * API endpoint
      */
     @GetMapping("/api/tests")
     @ResponseBody
@@ -308,12 +251,7 @@ public class SpeakingTestController {
             Sort sortOrder = getSortOrder(sort);
             Pageable pageable = PageRequest.of(page, size, sortOrder);
             
-            Page<IeltsSpeakingTest> testPage;
-            if (search != null && !search.trim().isEmpty()) {
-                testPage = searchTests(search, pageable);
-            } else {
-                testPage = speakingTestRepository.findAll(pageable);
-            }
+            Page<IeltsSpeakingTest> testPage = speakingTestRepository.findAll(pageable);
             
             Map<String, Object> response = new HashMap<>();
             response.put("tests", testPage.getContent());
@@ -332,32 +270,27 @@ public class SpeakingTestController {
         }
     }
 
-    /**
-     * API endpoint to get single test details
-     * 
-     * @param testId Test identifier
-     * @return JSON test details
-     */
     @GetMapping("/api/test/{testId}")
     @ResponseBody
     public ResponseEntity<?> getSpeakingTestApi(@PathVariable String testId) {
-        Optional<IeltsSpeakingTest> test = findTestById(testId);
-        
-        if (test.isPresent()) {
-            return ResponseEntity.ok(test.get());
-        } else {
+        try {
+            Long id = extractIdFromTestId(testId);
+            Optional<IeltsSpeakingTest> test = speakingTestRepository.findById(id);
+            
+            if (test.isPresent()) {
+                return ResponseEntity.ok(test.get());
+            } else {
+                Map<String, String> error = new HashMap<>();
+                error.put("error", "Test not found: " + testId);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+            }
+        } catch (Exception e) {
             Map<String, String> error = new HashMap<>();
-            error.put("error", "Test not found: " + testId);
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
         }
     }
 
-    /**
-     * Check evaluation status (AJAX endpoint)
-     * 
-     * @param submissionId Submission identifier
-     * @return JSON with status
-     */
     @GetMapping("/api/result/{submissionId}/status")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> checkEvaluationStatus(
@@ -385,54 +318,36 @@ public class SpeakingTestController {
     // ==================== Helper Methods ====================
 
     /**
-     * Get sort order based on sort criteria
+     * Extract numeric ID from testId string (e.g., "test-1" -> 1)
      */
+    private Long extractIdFromTestId(String testId) {
+        try {
+            String[] parts = testId.split("-");
+            return Long.parseLong(parts[parts.length - 1]);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid testId format: " + testId);
+        }
+    }
+
     private Sort getSortOrder(String sort) {
         switch (sort) {
             case "oldest":
                 return Sort.by(Sort.Direction.ASC, "createdAt");
             case "most-attempted":
-                return Sort.by(Sort.Direction.DESC, "attemptCount");
-            default: // newest
+                return Sort.by(Sort.Direction.DESC, "id");
+            default:
                 return Sort.by(Sort.Direction.DESC, "createdAt");
         }
     }
 
-    /**
-     * Search tests by query
-     */
-    private Page<IeltsSpeakingTest> searchTests(String query, Pageable pageable) {
-        // TODO: Implement custom search query
-        // For now, return all tests
-        return speakingTestRepository.findAll(pageable);
-    }
-
-    /**
-     * Find test by ID
-     */
-    private Optional<IeltsSpeakingTest> findTestById(String testId) {
-        // TODO: Implement proper search by testId field
-        List<IeltsSpeakingTest> allTests = speakingTestRepository.findAll();
-        return allTests.stream()
-                .filter(test -> testId.equals(test.getId()))
-                .findFirst();
-    }
-
-    /**
-     * Track test view
-     */
     private void trackTestView(String testId, HttpSession session) {
         String sessionKey = "viewed_" + testId;
         if (session.getAttribute(sessionKey) == null) {
             session.setAttribute(sessionKey, LocalDateTime.now());
-            // TODO: Increment view count in database
             System.out.println("Tracking view for test: " + testId);
         }
     }
 
-    /**
-     * Validate audio file
-     */
     private boolean isValidAudioFile(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             return false;
@@ -451,22 +366,14 @@ public class SpeakingTestController {
         return validFormat && validSize;
     }
 
-    /**
-     * Save audio file
-     */
     private String saveAudioFile(MultipartFile file, String testId, String part, String submissionId) 
             throws IOException {
-        // TODO: Implement actual file storage (cloud storage in production)
         String filename = String.format("%s_%s_%s_%s.mp3", submissionId, testId, part, System.currentTimeMillis());
         System.out.println("Saving audio file: " + filename);
         return "/uploads/speaking/" + filename;
     }
 
-    /**
-     * Get Part 1 questions
-     */
     private List<String> getTestPart1Questions(IeltsSpeakingTest test) {
-        // TODO: Fetch from database
         return Arrays.asList(
             "Let's talk about your hometown. Where are you from?",
             "What do you like most about your hometown?",
@@ -475,19 +382,11 @@ public class SpeakingTestController {
         );
     }
 
-    /**
-     * Get Part 2 topic
-     */
     private String getTestPart2Topic(IeltsSpeakingTest test) {
-        // TODO: Fetch from database
-        return "Describe a person who has had an important influence on your life.";
+        return test.getMainTopic() != null ? test.getMainTopic() : "Describe a memorable event in your life.";
     }
 
-    /**
-     * Get Part 3 questions
-     */
     private List<String> getTestPart3Questions(IeltsSpeakingTest test) {
-        // TODO: Fetch from database
         return Arrays.asList(
             "How important is family in your culture?",
             "Do you think the role of family is changing in modern society?",
@@ -495,9 +394,6 @@ public class SpeakingTestController {
         );
     }
 
-    /**
-     * Generate mock result for demonstration
-     */
     private Map<String, Object> generateMockResult(String testId) {
         Map<String, Object> result = new HashMap<>();
         result.put("overallScore", 7.5);
