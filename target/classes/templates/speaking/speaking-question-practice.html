@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${pageTitle} ?: 'Question Practice'">IELTS Practice</title>
+
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/header.css}">
+    <link rel="stylesheet" th:href="@{/css/footer.css}">
+    <link rel="stylesheet" th:href="@{/css/practice-page.css}">
+    <style>
+        /* Inline styling for the microphone button */
+        .microphone-button {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background-color: #f44336;
+            color: white;
+            font-size: 40px;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .microphone-button:hover {
+            background-color: #d32f2f;
+        }
+        .microphone-button.recording {
+            background-color: #388e3c; /* Green when recording */
+        }
+    </style>
+</head>
+<body>
+<header th:replace="~{fragments/header :: header}"></header>
+
+<main class="practice-page container">
+
+    <div class="question-display-area">
+        <h1 th:text="${pageTitle}">Part X Practice</h1>
+
+        <div class="question-container">
+            <h2>Read the question below:</h2>
+            <p class="question-text" th:text="${questionText}">[Placeholder Question Text]</p>
+        </div>
+    </div>
+
+    <div class="recording-area">
+
+        <p id="status">Click the microphone to start recording...</p>
+
+        <button id="recordButton" class="microphone-button" disabled>
+            🎙️
+        </button>
+
+        <audio id="audioPlayback" controls style="display: none; margin-top: 20px;"></audio>
+
+        <form id="nextQuestionForm" method="POST" th:action="@{/speaking/next}">
+            <input type="hidden" name="answerUrl" id="answerUrlField">
+
+            <button type="submit"
+                    th:if="${hasNext}"
+                    id="nextButton"
+                    class="btn-primary"
+                    style="margin-top: 20px;"
+                    disabled>
+                Next Question (Continue Practice)
+            </button>
+
+            <button type="submit"
+                    th:if="${!hasNext}"
+                    id="finishButton"
+                    class="btn-success"
+                    style="margin-top: 20px;"
+                    disabled>
+                Finish Test (View Results)
+            </button>
+        </form>
+    </div>
+
+    <script>
+        // --- Global/Shared Variables ---
+        const recordButton = document.getElementById('recordButton');
+        const statusElement = document.getElementById('status');
+        const audioPlayback = document.getElementById('audioPlayback');
+        const nextButton = document.getElementById('nextButton');
+        const finishButton = document.getElementById('finishButton');
+        const answerUrlField = document.getElementById('answerUrlField');
+
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+
+        // --- Core Upload Function (Talks to the Spring endpoint /api/upload-audio) ---
+        async function uploadAudio(audioBlob) {
+            statusElement.textContent = "Uploading recording to server...";
+
+            const formData = new FormData();
+            // "audioFile" must match the @RequestParam in the Java controller
+            formData.append("audioFile", audioBlob, "speaking_answer.webm");
+
+            try {
+                const response = await fetch('/api/upload-audio', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    // Log the error response status (e.g., 500)
+                    const errorText = await response.text();
+                    console.error("Upload failed on server. Status:", response.status, "Response:", errorText);
+                    throw new Error('Upload failed with status ' + response.status);
+                }
+
+                const result = await response.json();
+                // Return the local file path ("file:///...") needed by UrlResource in the service
+                return result.fileUrl;
+
+            } catch (error) {
+                console.error("Upload error:", error);
+                statusElement.textContent = "Upload failed. Check console.";
+                return null;
+            }
+        }
+        // --------------------------------------------------------------------------
+
+        // --- MediaRecorder Setup ---
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    mediaRecorder = new MediaRecorder(stream);
+                    mediaRecorder.ondataavailable = event => {
+                        audioChunks.push(event.data);
+                    };
+
+                    mediaRecorder.onstop = async () => {
+                        isRecording = false;
+                        recordButton.classList.remove('recording');
+                        recordButton.innerHTML = '🎙️';
+                        statusElement.textContent = 'Recording finished. Uploading...';
+
+                        if (nextButton) nextButton.disabled = true;
+                        if (finishButton) finishButton.disabled = true;
+
+                        const audioBlob = new Blob(audioChunks, { 'type' : 'audio/webm' });
+
+                        // CALL THE UPLOAD FUNCTION
+                        const serverUrl = await uploadAudio(audioBlob);
+
+                        if (serverUrl) {
+                            answerUrlField.value = serverUrl;
+                            if (nextButton) nextButton.disabled = false;
+                            if (finishButton) finishButton.disabled = false;
+                            statusElement.textContent = "Recording saved. Ready to proceed.";
+
+                            const audioUrl = URL.createObjectURL(audioBlob);
+                            audioPlayback.src = audioUrl;
+                            audioPlayback.style.display = 'block';
+                        } else {
+                            statusElement.textContent = "Upload failed. Please record again.";
+                        }
+                        audioChunks = [];
+                    };
+                    recordButton.disabled = false;
+                })
+                .catch(error => {
+                    statusElement.textContent = 'Microphone access denied or error: ' + error.name;
+                    recordButton.disabled = true;
+                });
+        } else {
+            statusElement.textContent = 'Your browser does not support media devices.';
+            recordButton.disabled = true;
+        }
+
+        // --- Record Button Click Handler ---
+        recordButton.addEventListener('click', () => {
+            if (!mediaRecorder) return;
+
+            if (isRecording) {
+                mediaRecorder.stop();
+            } else {
+                audioChunks = [];
+                mediaRecorder.start();
+                isRecording = true;
+                recordButton.classList.add('recording');
+                recordButton.innerHTML = '⏹️';
+                audioPlayback.style.display = 'none';
+                statusElement.textContent = 'Recording... Speak now!';
+
+                if (nextButton) nextButton.disabled = true;
+                if (finishButton) finishButton.disabled = true;
+            }
+        });
+    </script>
+</main>
+
+<footer th:replace="~{fragments/footer :: footer}"></footer>
+</body>
+</html>
