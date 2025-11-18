@@ -1,5 +1,11 @@
 USE ielts_db;
 
+-- 1. Drop tables with Foreign Keys first
+DROP TABLE IF EXISTS speaking_test_details;
+DROP TABLE IF EXISTS speaking_test_questions;
+
+-- 2. Drop the main parent table last
+DROP TABLE IF EXISTS speaking_tests;
 
 --- BẢNG 1: Lưu thông tin chung về bài kiểm tra
 CREATE TABLE IF NOT EXISTS speaking_tests (
@@ -32,7 +38,6 @@ CREATE TABLE IF NOT EXISTS speaking_test_questions (
     FOREIGN KEY (test_id) REFERENCES speaking_tests(test_id)
         ON DELETE CASCADE
 );
-USE ielts_db;
 
 
 INSERT INTO speaking_tests (test_id, test_date, main_topic) VALUES
@@ -203,12 +208,12 @@ INSERT INTO speaking_test_details (test_id, part_topic, detail_text) VALUES
 --- CHÈN DỮ LIỆU VÀO BẢNG speaking_test_questions
 INSERT INTO speaking_test_questions (test_id, part_number, question_text) VALUES
 -- Test 1 (02.01)
-(1, 'Part 1', 'Work or study'),
-(1, 'Part 1', 'What do you do'),
-(1, 'Part 1', 'Why did you choose your job'),
-(1, 'Part 1', 'What do you not like about your job'),
+(1, 'Part 1', 'Do you currently work or study?'),
+(1, 'Part 1', 'What is your future plan?'),
+(1, 'Part 1', 'Why did you choose your job?'),
+(1, 'Part 1', 'What do you not like about your job?'),
 (1, 'Part 1', 'Did you party often when you were a child?'),
-(1, 'Part 1', 'Do you like small or big parties,...'),
+(1, 'Part 1', 'Do you like small or big parties?'),
 (1, 'Part 3', 'Do you think it is a good idea to let animals stay in local parks for people to visit?'),
 (1, 'Part 3', 'What kind of people like to visit natural places?'),
 (1, 'Part 3', 'What are the differences between a natural place and a city?'),

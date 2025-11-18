@@ -77,21 +77,21 @@ public class TestController {
      * Speaking tests page
      * @return speaking-tests.html
      */
-    @GetMapping("/speaking")
+    @GetMapping("/speaking") // Path: /test/speaking
     public String speakingTests(Model model, HttpSession session) {
         User user = (User) session.getAttribute("loggedInUser");
-        
-        if (user == null) {
-            return "redirect:/require-login?redirect=/test/speaking";
-        }
-        
-        model.addAttribute("pageTitle", "Speaking Tests");
-        model.addAttribute("user", user);
-        model.addAttribute("testCount", 50);
-        
-        return "speaking-tests";
-    }
 
+        // This is the new, correct path handled by the dedicated controller
+        String redirectTarget = "/speaking/tests";
+
+        if (user == null) {
+            // Redirect unauthenticated user to log in, preserving the target path
+            return "redirect:/require-login?redirect=" + redirectTarget;
+        }
+
+        // REDIRECT: Sends the user to the dedicated SpeakingTestController path
+        return "redirect:" + redirectTarget;
+    }
     /**
      * Reading tests page
      * @return reading-tests.html
