@@ -49,6 +49,33 @@
             gap: 8px;
         }
 
+        /* ✅ NEW: Quick Navigation Buttons */
+        .quick-nav {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 25px;
+            flex-wrap: wrap;
+        }
+
+        .nav-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 2px solid white;
+            padding: 10px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .nav-btn:hover {
+            background: white;
+            color: #667eea;
+            transform: translateY(-2px);
+        }
+
         /* Score Summary */
         .score-summary {
             display: grid;
@@ -114,6 +141,7 @@
             padding: 40px;
             border-radius: 20px;
             box-shadow: 0 5px 25px rgba(0,0,0,0.08);
+            scroll-margin-top: 20px; /* ✅ For smooth scroll */
         }
 
         .task-header {
@@ -174,7 +202,7 @@
             font-size: 15px;
         }
 
-        /* Image Display for Task 1 */
+        /* Image Display */
         .task-image {
             margin: 20px 0;
             text-align: center;
@@ -259,43 +287,8 @@
             font-weight: 600;
         }
 
-        .feedback-content ul {
-            list-style: none;
-            margin-left: 0;
-            margin-bottom: 20px;
-        }
-
-        .feedback-content li {
-            margin-bottom: 10px;
-            padding-left: 25px;
-            position: relative;
-        }
-
-        .feedback-content li:before {
-            content: "✓";
-            position: absolute;
-            left: 0;
-            color: #4caf50;
-            font-weight: bold;
-        }
-
-        .feedback-content b, 
-        .feedback-content strong {
-            color: #e53935;
-            font-weight: 600;
-        }
-
         .feedback-content p {
             margin-bottom: 15px;
-        }
-
-        /* Full Width Feedback Section */
-        .full-feedback-section {
-            background: white;
-            padding: 40px;
-            border-radius: 20px;
-            box-shadow: 0 5px 25px rgba(0,0,0,0.08);
-            margin-bottom: 30px;
         }
 
         /* Action Buttons */
@@ -319,12 +312,12 @@
             align-items: center;
             gap: 10px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border: none;
         }
 
         .btn-primary {
             background: linear-gradient(135deg, #e53935 0%, #c62828 100%);
             color: white;
-            border: none;
         }
 
         .btn-primary:hover {
@@ -347,7 +340,6 @@
         .btn-success {
             background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
             color: white;
-            border: none;
         }
 
         .btn-success:hover {
@@ -355,7 +347,7 @@
             box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
         }
 
-        /* Responsive Design */
+        /* Responsive */
         @media (max-width: 1024px) {
             .result-content {
                 grid-template-columns: 1fr;
@@ -366,55 +358,20 @@
             .result-header {
                 padding: 30px 20px;
             }
-
             .result-header h1 {
                 font-size: 28px;
             }
-
             .score-summary {
                 grid-template-columns: 1fr;
             }
-
             .task-section {
                 padding: 25px;
             }
-
             .task-header {
                 flex-direction: column;
                 gap: 15px;
                 text-align: center;
             }
-
-            .action-buttons {
-                flex-direction: column;
-            }
-
-            .btn {
-                width: 100%;
-                justify-content: center;
-            }
-        }
-
-        /* Loading State */
-        .loading-feedback {
-            text-align: center;
-            padding: 40px;
-            color: #666;
-        }
-
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #e53935;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
@@ -450,29 +407,35 @@
             <div class="score-summary">
                 <div class="score-box">
                     <div class="score-label">Task 1</div>
-                    <div class="score-number" th:text="${submission.task1Score}">6.5</div>
+                    <div class="score-number" th:text="${submission.task1Score != null ? submission.task1Score : 'N/A'}">6.5</div>
                 </div>
                 <div class="score-box">
                     <div class="score-label">Task 2</div>
-                    <div class="score-number" th:text="${submission.task2Score}">7.0</div>
+                    <div class="score-number" th:text="${submission.task2Score != null ? submission.task2Score : 'N/A'}">7.0</div>
                 </div>
                 <div class="score-box overall">
                     <div class="score-label">Overall Band Score</div>
-                    <div class="score-number" th:text="${submission.overallScore}">6.5</div>
+                    <div class="score-number" th:text="${submission.overallScore != null ? submission.overallScore : 'N/A'}">6.5</div>
                 </div>
+            </div>
+
+            <!-- ✅ NEW: Quick Navigation -->
+            <div class="quick-nav">
+                <button class="nav-btn" onclick="scrollToSection('task1-section')">📊 Go to Task 1</button>
+                <button class="nav-btn" onclick="scrollToSection('task2-section')">✏️ Go to Task 2</button>
             </div>
         </div>
 
         <!-- Main Content: Two Columns -->
         <div class="result-content">
             <!-- Task 1 Section -->
-            <div class="task-section">
+            <div class="task-section" id="task1-section">
                 <div class="task-header">
                     <div class="task-title">
                         <span class="task-icon">📊</span>
                         <h2>Task 1</h2>
                     </div>
-                    <div class="task-score-badge" th:text="'Band ' + ${submission.task1Score}">
+                    <div class="task-score-badge" th:text="'Band ' + ${submission.task1Score != null ? submission.task1Score : 'N/A'}">
                         Band 6.5
                     </div>
                 </div>
@@ -485,7 +448,7 @@
                     </div>
                 </div>
 
-                <!-- Task 1 Image (if exists) -->
+                <!-- Task 1 Image -->
                 <div class="task-image" th:if="${submission.test.directImageUrl}">
                     <img th:src="${submission.test.directImageUrl}" alt="Task 1 Image">
                 </div>
@@ -493,7 +456,7 @@
                 <!-- Task 1 Answer -->
                 <div class="answer-section">
                     <h3>
-                        ✍️ Your Answer
+                        ✏️ Your Answer
                         <span class="word-count" th:text="${submission.task1WordCount} + ' words'">150 words</span>
                     </h3>
                     <div class="answer-display" th:text="${submission.task1Answer}">
@@ -505,22 +468,19 @@
                 <div class="feedback-section">
                     <h3>💬 Detailed Feedback</h3>
                     <div class="feedback-content" th:utext="${submission.getTask1Feedback()}">
-                        <div class="loading-feedback">
-                            <div class="spinner"></div>
-                            <p>Loading feedback...</p>
-                        </div>
+                        Loading feedback...
                     </div>
                 </div>
             </div>
 
             <!-- Task 2 Section -->
-            <div class="task-section">
+            <div class="task-section" id="task2-section">
                 <div class="task-header">
                     <div class="task-title">
-                        <span class="task-icon">✍️</span>
+                        <span class="task-icon">✏️</span>
                         <h2>Task 2</h2>
                     </div>
-                    <div class="task-score-badge" th:text="'Band ' + ${submission.task2Score}">
+                    <div class="task-score-badge" th:text="'Band ' + ${submission.task2Score != null ? submission.task2Score : 'N/A'}">
                         Band 7.0
                     </div>
                 </div>
@@ -536,7 +496,7 @@
                 <!-- Task 2 Answer -->
                 <div class="answer-section">
                     <h3>
-                        ✍️ Your Answer
+                        ✏️ Your Answer
                         <span class="word-count" th:text="${submission.task2WordCount} + ' words'">250 words</span>
                     </h3>
                     <div class="answer-display" th:text="${submission.task2Answer}">
@@ -548,10 +508,7 @@
                 <div class="feedback-section">
                     <h3>💬 Detailed Feedback</h3>
                     <div class="feedback-content" th:utext="${submission.getTask2Feedback()}">
-                        <div class="loading-feedback">
-                            <div class="spinner"></div>
-                            <p>Loading feedback...</p>
-                        </div>
+                        Loading feedback...
                     </div>
                 </div>
             </div>
@@ -562,7 +519,7 @@
             <a href="/dashboard" class="btn btn-secondary">
                 ← Back to Dashboard
             </a>
-            <a href="/writing/tests" class="btn btn-primary">
+            <a href="/test/writing" class="btn btn-primary">
                 Take Another Test →
             </a>
             <button onclick="window.print()" class="btn btn-success">
@@ -577,22 +534,28 @@
     <script th:src="@{/js/main.js}"></script>
     
     <script>
-        // Smooth scroll to sections
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('📄 Result page loaded');
-            
-            // Add print styles
-            const style = document.createElement('style');
-            style.textContent = `
-                @media print {
-                    .header, .footer, .action-buttons { display: none; }
-                    .result-page { margin: 0; padding: 20px; }
-                    .result-content { grid-template-columns: 1fr; }
-                    .task-section { break-inside: avoid; page-break-inside: avoid; }
-                }
-            `;
-            document.head.appendChild(style);
-        });
+        // ✅ Smooth scroll to section
+        function scrollToSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            if (section) {
+                section.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'start' 
+                });
+            }
+        }
+
+        // Print styles
+        const style = document.createElement('style');
+        style.textContent = `
+            @media print {
+                .header, .footer, .action-buttons, .quick-nav { display: none; }
+                .result-page { margin: 0; padding: 20px; }
+                .result-content { grid-template-columns: 1fr; }
+                .task-section { break-inside: avoid; page-break-inside: avoid; }
+            }
+        `;
+        document.head.appendChild(style);
     </script>
 </body>
 </html>

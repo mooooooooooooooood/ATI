@@ -1,14 +1,12 @@
 package com.ieltsgrading.ielts_evaluator.controller;
 
 import com.ieltsgrading.ielts_evaluator.model.IeltsWritingTest;
-import com.ieltsgrading.ielts_evaluator.model.TestSubmission;
+import com.ieltsgrading.ielts_evaluator.model.WritingSubmission;
 import com.ieltsgrading.ielts_evaluator.model.User;
 import com.ieltsgrading.ielts_evaluator.repository.IeltsWritingTestRepository;
 import com.ieltsgrading.ielts_evaluator.service.TestSubmissionService;
 import com.ieltsgrading.ielts_evaluator.service.UserService;
-import com.ieltsgrading.ielts_evaluator.service.WritingApiService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -16,24 +14,24 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.servlet.http.HttpSession;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Writing Test Controller - UPDATED with new submission flow
+ */
 @Controller
 @RequestMapping("/writing")
 public class WritingTestController {
+    
     @Autowired
     private TestSubmissionService submissionService;
 
     @Autowired
     private UserService userService;
-
-    @Autowired
-    private WritingApiService writingApiService;
 
     @Autowired
     private IeltsWritingTestRepository writingTestRepository;
@@ -53,8 +51,7 @@ public class WritingTestController {
             Model model) {
 
         try {
-            if (page < 1)
-                page = 1;
+            if (page < 1) page = 1;
 
             // Get tests from database
             List<IeltsWritingTest> tests;
@@ -79,7 +76,8 @@ public class WritingTestController {
             int startIndex = (page - 1) * PAGE_SIZE;
             int endIndex = Math.min(startIndex + PAGE_SIZE, totalTests);
 
-            List<Map<String, Object>> pagedTests = startIndex < totalTests ? testMaps.subList(startIndex, endIndex)
+            List<Map<String, Object>> pagedTests = startIndex < totalTests 
+                    ? testMaps.subList(startIndex, endIndex)
                     : Collections.emptyList();
 
             // Add attributes to model
@@ -166,7 +164,8 @@ public class WritingTestController {
     }
 
     /**
-     * Submit writing test - Save to database and process async
+     * ✅ UPDATED: Submit writing test - Save to database and process async
+     * This now uses the new TestSubmissionService
      */
     @PostMapping("/test/{testId}/submit")
     @ResponseBody
@@ -229,12 +228,12 @@ public class WritingTestController {
                 return ResponseEntity.badRequest().body(response);
             }
 
-            // Create submission in database
-            TestSubmission submission = submissionService.createSubmission(
+            // ✅ NEW: Create submission using TestSubmissionService
+            WritingSubmission submission = submissionService.createWritingSubmission(
                     user, test, task1Answer, task2Answer, task1Words, task2Words, timeSpent);
 
-            // Process submission asynchronously
-            submissionService.processSubmissionAsync(submission.getSubmissionUuid());
+            // ✅ NEW: Process submission asynchronously (calls AI API in background)
+            submissionService.processWritingSubmissionAsync(submission.getSubmissionUuid());
 
             // Clear drafts after submission
             clearDraft(session, testId, "task1");
@@ -243,6 +242,7 @@ public class WritingTestController {
             System.out.println("✅ Writing test submitted: " + testId);
             System.out.println("   Submission UUID: " + submission.getSubmissionUuid());
             System.out.println("   User: " + user.getName());
+            System.out.println("   Status: " + submission.getStatus());
 
             response.put("status", "success");
             response.put("submissionId", submission.getSubmissionUuid());
@@ -258,130 +258,6 @@ public class WritingTestController {
             response.put("status", "error");
             response.put("message", "Submission failed: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-        }
-    }
-
-    /**
-     * Submit with file upload (for Task 1 with image file)
-     */
-    @PostMapping("/test/{testId}/submit-with-file")
-    @ResponseBody
-    public ResponseEntity<Map<String, Object>> submitWithFile(
-            @PathVariable String testId,
-            @RequestParam String task1Answer,
-            @RequestParam MultipartFile task1Image,
-            @RequestParam String task2Answer,
-            HttpSession session) {
-
-        Map<String, Object> response = new HashMap<>();
-
-        try {
-            // Find test from database
-            Optional<IeltsWritingTest> testOpt = writingTestRepository.findByDisplayId(testId);
-
-            if (testOpt.isEmpty()) {
-                response.put("status", "error");
-                response.put("message", "Test not found");
-                return ResponseEntity.badRequest().body(response);
-            }
-
-            IeltsWritingTest test = testOpt.get();
-
-            // Validate
-            int task1Words = countWords(task1Answer);
-            int task2Words = countWords(task2Answer);
-
-            if (task1Words < MIN_TASK1_WORDS || task2Words < MIN_TASK2_WORDS) {
-                response.put("status", "error");
-                response.put("message", "Insufficient word count");
-                return ResponseEntity.badRequest().body(response);
-            }
-
-            // Submit Task 1 with file
-            Map<String, Object> task1Result = writingApiService.submitTask1WithFile(
-                    test.getTask1Question(),
-                    task1Answer,
-                    task1Image);
-
-            // Submit Task 2
-            Map<String, Object> task2Result = writingApiService.submitTask2(
-                    test.getTask2Question(),
-                    task2Answer);
-
-            // Combine results
-            Map<String, Object> apiResults = new HashMap<>();
-            apiResults.put("task1", task1Result);
-            apiResults.put("task2", task2Result);
-
-            String submissionId = UUID.randomUUID().toString();
-
-            Map<String, Object> submission = new HashMap<>();
-            submission.put("testId", testId);
-            submission.put("submissionId", submissionId);
-            submission.put("apiResults", apiResults);
-            session.setAttribute("writing_submission_" + submissionId, submission);
-
-            response.put("status", "success");
-            response.put("submissionId", submissionId);
-            response.put("results", apiResults);
-
-            return ResponseEntity.ok(response);
-
-        } catch (Exception e) {
-            response.put("status", "error");
-            response.put("message", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-        }
-    }
-
-    /**
-     * Display test result
-     */
-    @GetMapping("/result/{submissionId}")
-    public String writingResult(
-            @PathVariable String submissionId,
-            Model model,
-            HttpSession session) {
-
-        try {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> submission = (Map<String, Object>) session
-                    .getAttribute("writing_submission_" + submissionId);
-
-            if (submission == null) {
-                model.addAttribute("error", "Submission not found");
-                return "error-404";
-            }
-
-            String testId = (String) submission.get("testId");
-
-            model.addAttribute("pageTitle", "Writing Test Result");
-            model.addAttribute("testId", testId);
-            model.addAttribute("submissionId", submissionId);
-            model.addAttribute("task1Words", submission.get("task1Words"));
-            model.addAttribute("task2Words", submission.get("task2Words"));
-            model.addAttribute("timeSpent", submission.get("timeSpent"));
-            model.addAttribute("submittedAt", submission.get("submittedAt"));
-
-            // Get API results
-            @SuppressWarnings("unchecked")
-            Map<String, Object> apiResults = (Map<String, Object>) submission.get("apiResults");
-
-            if (apiResults != null) {
-                model.addAttribute("apiResults", apiResults);
-                model.addAttribute("task1Result", apiResults.get("task1"));
-                model.addAttribute("task2Result", apiResults.get("task2"));
-                model.addAttribute("overallScore", apiResults.get("overallScore"));
-            }
-
-            model.addAttribute("task1Answer", submission.get("task1Answer"));
-            model.addAttribute("task2Answer", submission.get("task2Answer"));
-
-            return "writing-result";
-
-        } catch (Exception e) {
-            model.addAttribute("error", "Error loading result: " + e.getMessage());
-            return "error";
         }
     }
 

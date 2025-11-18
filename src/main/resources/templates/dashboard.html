@@ -77,12 +77,16 @@
                                     05/11/2024 14:30
                                 </span>
                             </div>
-                            <div class="info-item">
+                            <div class="info-item" th:if="${submission.getTestType() == 'writing'}">
                                 <span class="icon">📝</span>
                                 <span>
                                     Task 1: <span th:text="${submission.task1WordCount}">150</span> words | 
                                     Task 2: <span th:text="${submission.task2WordCount}">250</span> words
                                 </span>
+                            </div>
+                            <div class="info-item" th:if="${submission.getTestType() == 'speaking'}">
+                                <span class="icon">🎤</span>
+                                <span>Speaking Test</span>
                             </div>
                         </div>
                         <div class="loading-indicator">
@@ -107,9 +111,13 @@
                 </div>
                 
                 <div class="submissions-grid" th:if="${!#lists.isEmpty(completedSubmissions)}">
+                    <!-- ✅ FIX: Use data-uuid attribute instead of onclick with string -->
                     <div class="submission-card completed" 
                          th:each="submission : ${completedSubmissions}"
-                         th:onclick="'viewResult(\'' + ${submission.submissionUuid} + '\')'">
+                         th:data-uuid="${submission.submissionUuid}"
+                         th:data-type="${submission.testType}"
+                         onclick="viewResult(this.dataset.uuid, this.dataset.type)"
+                         style="cursor: pointer;">
                         <div class="submission-header">
                             <h3 th:text="${submission.getTestDisplayName()}">CAM 20 - Test 1</h3>
                             <span class="status-badge completed">
@@ -127,29 +135,41 @@
                             <div class="info-item">
                                 <span class="icon">⏱️</span>
                                 <span>
-                                    <span th:text="${submission.timeSpent / 60}">45</span> minutes
+                                    <span th:text="${submission.timeSpent != null ? submission.timeSpent / 60 : 0}">45</span> minutes
                                 </span>
                             </div>
                         </div>
                         
-                        <div class="score-display">
+                        <!-- Writing Scores -->
+                        <div class="score-display" th:if="${submission.getTestType() == 'writing'}">
                             <div class="score-item">
                                 <div class="score-label">Task 1</div>
-                                <div class="score-value" th:text="'Band ' + ${submission.task1Score}">
+                                <div class="score-value" th:text="'Band ' + ${submission.task1Score ?: '0.0'}">
                                     Band 6.5
                                 </div>
                             </div>
                             <div class="score-item">
                                 <div class="score-label">Task 2</div>
-                                <div class="score-value" th:text="'Band ' + ${submission.task2Score}">
+                                <div class="score-value" th:text="'Band ' + ${submission.task2Score ?: '0.0'}">
                                     Band 7.0
                                 </div>
                             </div>
                             <div class="score-item overall">
                                 <div class="score-label">Overall</div>
                                 <div class="score-value highlight" 
-                                     th:text="'Band ' + ${submission.overallScore}">
+                                     th:text="'Band ' + ${submission.overallScore ?: '0.0'}">
                                     Band 6.5
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Speaking Scores -->
+                        <div class="score-display" th:if="${submission.getTestType() == 'speaking'}">
+                            <div class="score-item overall">
+                                <div class="score-label">Speaking</div>
+                                <div class="score-value highlight" 
+                                     th:text="'Band ' + ${submission.overallScore ?: '0.0'}">
+                                    Band 7.0
                                 </div>
                             </div>
                         </div>
@@ -171,19 +191,31 @@
     <script th:src="@{/js/main.js}"></script>
     <script th:src="@{/js/dashboard.js}"></script>
     
-    <script>
+    <script th:inline="javascript">
+        /*<![CDATA[*/
         // Auto-refresh for processing submissions
         const processingCount = /*[[${processingSubmissions.size()}]]*/ 0;
+        
         if (processingCount > 0) {
+            console.log('🔄 Found ' + processingCount + ' processing submissions');
             // Refresh page every 10 seconds to check status
             setTimeout(() => {
+                console.log('🔄 Refreshing dashboard to check status...');
                 window.location.reload();
             }, 10000);
         }
         
-        function viewResult(submissionUuid) {
-            window.location.href = `/result/${submissionUuid}`;
+        // ✅ View result function - supports both writing and speaking
+        function viewResult(submissionUuid, testType) {
+            if (testType === 'writing') {
+                window.location.href = '/result/' + submissionUuid;
+            } else if (testType === 'speaking') {
+                window.location.href = '/speaking/result/' + submissionUuid;
+            } else {
+                window.location.href = '/result/' + submissionUuid;
+            }
         }
+        /*]]>*/
     </script>
 </body>
 </html>

@@ -105,7 +105,7 @@ public class SpeakingSubmission implements ITestSubmission {
     public String getTestDisplayName() {
         if (test != null) {
             // FIXED: Use test.getTestDate() instead of non-existent getCamNumber()
-            return test.getTitle();
+            return test.getTestTitle();
         }
         return "Speaking Test #" + testId;
     }

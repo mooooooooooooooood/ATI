@@ -122,25 +122,37 @@ public class WritingSubmission implements ITestSubmission {
 
     @Override
     public String getStatusDisplay() {
-        if (status == null) return "Unknown";
+        if (status == null)
+            return "Unknown";
         switch (status.toLowerCase()) {
-            case "completed": return "Completed";
-            case "processing": return "Processing";
-            case "pending": return "Pending";
-            case "failed": return "Failed";
-            default: return status.substring(0, 1).toUpperCase() + status.substring(1);
+            case "completed":
+                return "Completed";
+            case "processing":
+                return "Processing";
+            case "pending":
+                return "Pending";
+            case "failed":
+                return "Failed";
+            default:
+                return status.substring(0, 1).toUpperCase() + status.substring(1);
         }
     }
 
     @Override
     public String getStatusColor() {
-        if (status == null) return "#999";
+        if (status == null)
+            return "#999";
         switch (status.toLowerCase()) {
-            case "completed": return "#4caf50";
-            case "processing": return "#2196f3";
-            case "pending": return "#ff9800";
-            case "failed": return "#f44336";
-            default: return "#999";
+            case "completed":
+                return "#4caf50";
+            case "processing":
+                return "#2196f3";
+            case "pending":
+                return "#ff9800";
+            case "failed":
+                return "#f44336";
+            default:
+                return "#999";
         }
     }
 
@@ -238,16 +250,15 @@ public class WritingSubmission implements ITestSubmission {
         if (task1Result == null || task1Result.isEmpty()) {
             return "<p>No feedback available yet.</p>";
         }
+
         try {
             Map<String, Object> result = parseJson(task1Result);
-            Object message = result.get("message");
-            if (message != null) {
-                return message.toString();
-            }
+            return buildDetailedFeedbackHtml(result, "Task 1");
+
         } catch (Exception e) {
             System.err.println("Error parsing Task 1 feedback: " + e.getMessage());
+            return "<p>Error loading feedback</p>";
         }
-        return "<p>Feedback loading...</p>";
     }
 
     @Override
@@ -255,22 +266,130 @@ public class WritingSubmission implements ITestSubmission {
         if (task2Result == null || task2Result.isEmpty()) {
             return "<p>No feedback available yet.</p>";
         }
+
         try {
             Map<String, Object> result = parseJson(task2Result);
-            Object message = result.get("message");
-            if (message != null) {
-                return message.toString();
-            }
+            return buildDetailedFeedbackHtml(result, "Task 2");
+
         } catch (Exception e) {
             System.err.println("Error parsing Task 2 feedback: " + e.getMessage());
+            return "<p>Error loading feedback</p>";
         }
-        return "<p>Feedback loading...</p>";
+    }
+
+    private String buildDetailedFeedbackHtml(Map<String, Object> result, String taskName) {
+        if (result == null || result.isEmpty()) {
+            return "<p>No feedback available</p>";
+        }
+
+        StringBuilder html = new StringBuilder();
+
+        // Overall Band Score
+        Object overallBand = result.get("overall_band");
+        if (overallBand != null) {
+            html.append("<div style='background: #f0f7ff; padding: 15px; border-radius: 8px; margin-bottom: 20px;'>");
+            html.append("<h3 style='color: #1976d2; margin-top: 0;'>Overall Band Score: ").append(overallBand)
+                    .append("</h3>");
+            html.append("</div>");
+        }
+
+        // Criteria Sections
+        String[] criteria;
+        if (taskName.equals("Task 1")) {
+            criteria = new String[] { "task_achievement", "coherence_cohesion", "lexical_resource",
+                    "grammatical_range_accuracy" };
+        } else {
+            criteria = new String[] { "task_response", "coherence_cohesion", "lexical_resource",
+                    "grammatical_range_accuracy" };
+        }
+
+        String[] criteriaLabels = {
+                "Task Achievement / Task Response",
+                "Coherence & Cohesion",
+                "Lexical Resource",
+                "Grammatical Range & Accuracy"
+        };
+
+        for (int i = 0; i < criteria.length; i++) {
+            Object criteriaObj = result.get(criteria[i]);
+            if (criteriaObj instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> criteriaMap = (Map<String, Object>) criteriaObj;
+
+                html.append("<div style='margin-bottom: 30px; border-left: 4px solid #e53935; padding-left: 20px;'>");
+
+                // Criteria Header
+                html.append("<h4 style='color: #e53935; font-size: 20px; margin-bottom: 10px;'>");
+                html.append(criteriaLabels[i]);
+
+                Object band = criteriaMap.get("band");
+                if (band != null) {
+                    html.append(" - <span style='color: #1976d2;'>Band ").append(band).append("</span>");
+                }
+                html.append("</h4>");
+
+                // Assessment
+                Object assessment = criteriaMap.get("assessment");
+                if (assessment != null) {
+                    String assessmentText = assessment.toString();
+                    // Format paragraphs
+                    String[] paragraphs = assessmentText.split("\\n\\n");
+                    for (String para : paragraphs) {
+                        if (!para.trim().isEmpty()) {
+                            html.append("<p style='line-height: 1.8; color: #444; margin-bottom: 15px;'>");
+                            html.append(para.trim());
+                            html.append("</p>");
+                        }
+                    }
+                }
+
+                html.append("</div>");
+            }
+        }
+
+        // Suggested Essay
+        Object suggestedEssayObj = result.get("suggested_essay");
+        if (suggestedEssayObj instanceof Map) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> suggestedMap = (Map<String, Object>) suggestedEssayObj;
+
+            html.append("<div style='background: #e8f5e9; padding: 20px; border-radius: 10px; margin-top: 30px;'>");
+            html.append("<h4 style='color: #2e7d32; margin-top: 0;'>✨ Suggested Improved Essay</h4>");
+
+            Object bandLower = suggestedMap.get("band_lower_bound");
+            Object bandUpper = suggestedMap.get("band_upper_bound");
+            if (bandLower != null && bandUpper != null) {
+                html.append("<p style='color: #2e7d32; font-weight: 600;'>");
+                html.append("Target Band: ").append(bandLower).append(" - ").append(bandUpper);
+                html.append("</p>");
+            }
+
+            Object improvedEssay = suggestedMap.get("improved_essay");
+            if (improvedEssay != null) {
+                String essayText = improvedEssay.toString();
+                String[] paragraphs = essayText.split("\\\\n\\\\n|\\n\\n");
+                html.append("<div style='background: white; padding: 15px; border-radius: 5px; margin-top: 10px;'>");
+                for (String para : paragraphs) {
+                    if (!para.trim().isEmpty()) {
+                        html.append("<p style='line-height: 1.8; margin-bottom: 15px;'>");
+                        html.append(para.trim().replace("\\n", "<br>"));
+                        html.append("</p>");
+                    }
+                }
+                html.append("</div>");
+            }
+
+            html.append("</div>");
+        }
+
+        return html.toString();
     }
 
     /* ==================== Helper Methods ==================== */
 
     private Map<String, Object> parseJson(String json) {
-        if (json == null || json.isEmpty()) return new HashMap<>();
+        if (json == null || json.isEmpty())
+            return new HashMap<>();
         try {
             ObjectMapper mapper = new ObjectMapper();
             return mapper.readValue(json, Map.class);
@@ -388,4 +507,5 @@ public class WritingSubmission implements ITestSubmission {
                 ", score=" + overallScore +
                 '}';
     }
+
 }

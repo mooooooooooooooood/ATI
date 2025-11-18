@@ -18,7 +18,8 @@ public class ReadingResultDetailDTO {
     /**
      * Constructor for mapping graded answers to the DTO.
      * Note: argument order should match the typical calling order from the Service layer.
-     */
+     */public ReadingResultDetailDTO(){}
+
     public ReadingResultDetailDTO(
             Integer questionId,
             Integer questionTypeId,
@@ -38,6 +39,7 @@ public class ReadingResultDetailDTO {
         this.isCorrect = isCorrect;
         this.geminiExplanation = geminiExplanation;
     }
+
 
     // --- Getters and Setters ---
 
