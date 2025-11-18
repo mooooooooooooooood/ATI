@@ -1,41 +1,51 @@
 package com.ieltsgrading.ielts_evaluator.service;
 
+import com.ieltsgrading.ielts_evaluator.model.*;
+import com.ieltsgrading.ielts_evaluator.repository.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ieltsgrading.ielts_evaluator.model.IeltsWritingTest;
-import com.ieltsgrading.ielts_evaluator.model.TestSubmission;
-import com.ieltsgrading.ielts_evaluator.model.User;
-import com.ieltsgrading.ielts_evaluator.repository.TestSubmissionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
+/**
+ * Unified Test Submission Service - FIXED VERSION
+ */
 @Service
 public class TestSubmissionService {
-    
+
     @Autowired
-    private TestSubmissionRepository submissionRepository;
-    
+    private WritingSubmissionRepository writingSubmissionRepo;
+
+    @Autowired
+    private SpeakingSubmissionRepository speakingSubmissionRepo;
+
+    @Autowired
+    private IeltsWritingTestRepository writingTestRepo;
+
     @Autowired
     private WritingApiService writingApiService;
     
     private final ObjectMapper objectMapper = new ObjectMapper();
-    
+
     /**
-     * Create new submission and save to database
+     * Create Writing Submission
      */
     @Transactional
-    public TestSubmission createSubmission(User user, IeltsWritingTest test, 
-                                          String task1Answer, String task2Answer,
-                                          int task1Words, int task2Words, int timeSpent) {
-        
-        TestSubmission submission = new TestSubmission();
+    public WritingSubmission createWritingSubmission(
+            User user, 
+            IeltsWritingTest test,
+            String task1Answer, 
+            String task2Answer,
+            int task1Words, 
+            int task2Words, 
+            int timeSpent) {
+
+        WritingSubmission submission = new WritingSubmission();
         submission.setSubmissionUuid(UUID.randomUUID().toString());
         submission.setUser(user);
+        submission.setTestId(test.getTestId());
         submission.setTest(test);
         submission.setTask1Answer(task1Answer);
         submission.setTask2Answer(task2Answer);
@@ -43,277 +53,342 @@ public class TestSubmissionService {
         submission.setTask2WordCount(task2Words);
         submission.setTimeSpent(timeSpent);
         submission.setStatus("pending");
-        submission.setSubmittedAt(LocalDateTime.now());
-        
-        return submissionRepository.save(submission);
+
+        WritingSubmission saved = writingSubmissionRepo.save(submission);
+
+        System.out.println("✅ Created WritingSubmission: " + saved.getSubmissionUuid());
+        return saved;
     }
-    
+
     /**
-     * Process submission asynchronously - Call external API
+     * Process Writing Submission Asynchronously
      */
     @Transactional
-    public void processSubmissionAsync(String submissionUuid) {
-        new Thread(() -> processSubmission(submissionUuid)).start();
+    public void processWritingSubmissionAsync(String submissionUuid) {
+        new Thread(() -> {
+            try {
+                processWritingSubmission(submissionUuid);
+            } catch (Exception e) {
+                System.err.println("❌ Async processing error: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }).start();
     }
-    
+
     /**
-     * Process submission - Call external WritingApiService to grade the test
+     * ✅ FIXED: Process Writing Submission - Parse JSON correctly
      */
     @Transactional
-    public void processSubmission(String submissionUuid) {
+    public void processWritingSubmission(String submissionUuid) {
         try {
-            Optional<TestSubmission> optSubmission = submissionRepository.findBySubmissionUuid(submissionUuid);
+            Optional<WritingSubmission> optSubmission = writingSubmissionRepo
+                    .findBySubmissionUuid(submissionUuid);
+
             if (optSubmission.isEmpty()) {
                 System.err.println("❌ Submission not found: " + submissionUuid);
                 return;
             }
-            
-            TestSubmission submission = optSubmission.get();
-            IeltsWritingTest test = submission.getTest();
-            
-            // Update status to processing
+
+            WritingSubmission submission = optSubmission.get();
             submission.setStatus("processing");
-            submissionRepository.save(submission);
-            
+            writingSubmissionRepo.save(submission);
+
             System.out.println("========================================");
-            System.out.println("🔄 PROCESSING SUBMISSION: " + submissionUuid);
-            System.out.println("   User: " + submission.getUser().getName());
-            System.out.println("   Test: " + test.getDisplayId());
+            System.out.println("📝 PROCESSING WRITING SUBMISSION");
+            System.out.println("   UUID: " + submissionUuid);
             System.out.println("========================================");
-            
-            // Call WritingApiService.submitCompleteTest() - This calls external API
-            Map<String, Object> apiResults = writingApiService.submitCompleteTest(
-                test.getTask1Question(),
-                submission.getTask1Answer(),
-                test.getTask2Question(),
-                submission.getTask2Answer(),
-                test.getDirectImageUrl()
-            );
-            
-            System.out.println("📥 API Response received: " + apiResults);
-            
-            // Check if API call was successful
-            if (apiResults != null && "success".equals(apiResults.get("status"))) {
-                
-                // Extract Task 1 result
-                @SuppressWarnings("unchecked")
-                Map<String, Object> task1Result = (Map<String, Object>) apiResults.get("task1");
-                if (task1Result != null) {
-                    // Save raw JSON result
-                    submission.setTask1Result(objectMapper.writeValueAsString(task1Result));
-                    // Extract band score from message
-                    Double task1Score = extractScore(task1Result.get("message"));
-                    submission.setTask1Score(task1Score);
-                    System.out.println("   ✅ Task 1 Score: " + task1Score);
-                } else {
-                    System.err.println("   ⚠️ Task 1 result is null");
-                }
-                
-                // Extract Task 2 result
-                @SuppressWarnings("unchecked")
-                Map<String, Object> task2Result = (Map<String, Object>) apiResults.get("task2");
-                if (task2Result != null) {
-                    // Save raw JSON result
-                    submission.setTask2Result(objectMapper.writeValueAsString(task2Result));
-                    // Extract band score from message
-                    Double task2Score = extractScore(task2Result.get("message"));
-                    submission.setTask2Score(task2Score);
-                    System.out.println("   ✅ Task 2 Score: " + task2Score);
-                } else {
-                    System.err.println("   ⚠️ Task 2 result is null");
-                }
-                
-                // Calculate overall score (Task 1 = 33%, Task 2 = 67%)
-                if (submission.getTask1Score() != null && submission.getTask2Score() != null) {
-                    double overall = (submission.getTask1Score() / 3.0) + (submission.getTask2Score() * 2.0 / 3.0);
-                    overall = Math.round(overall * 2.0) / 2.0; // Round to nearest 0.5
-                    submission.setOverallScore(overall);
-                    System.out.println("   ✅ Overall Score: " + overall);
-                } else {
-                    System.err.println("   ⚠️ Cannot calculate overall score - missing band scores");
-                }
-                
-                // Check if we got overall score from API response
-                if (apiResults.containsKey("overallScore") && submission.getOverallScore() == null) {
-                    Object apiOverallScore = apiResults.get("overallScore");
-                    if (apiOverallScore instanceof Number) {
-                        submission.setOverallScore(((Number) apiOverallScore).doubleValue());
-                        System.out.println("   ℹ️ Using overall score from API: " + submission.getOverallScore());
-                    }
-                }
-                
-                submission.setStatus("completed");
-                submission.setCompletedAt(LocalDateTime.now());
-                
-                System.out.println("✅ SUBMISSION COMPLETED SUCCESSFULLY");
-                System.out.println("========================================\n");
-                
-            } else {
-                // API call failed
-                String errorMsg = apiResults != null ? String.valueOf(apiResults.get("message")) : "API returned error status";
-                throw new Exception(errorMsg);
+
+            // Get test details
+            Optional<IeltsWritingTest> testOpt = writingTestRepo.findById(submission.getTestId());
+            if (testOpt.isEmpty()) {
+                throw new RuntimeException("Test not found: " + submission.getTestId());
             }
-            
-            submissionRepository.save(submission);
-            
+
+            IeltsWritingTest test = testOpt.get();
+            submission.setTest(test);
+
+            // Call AI API
+            System.out.println("📡 Calling AI API...");
+            Map<String, Object> apiResults = writingApiService.submitCompleteTest(
+                    test.getTask1Question(),
+                    submission.getTask1Answer(),
+                    test.getTask2Question(),
+                    submission.getTask2Answer(),
+                    test.getDirectImageUrl()
+            );
+
+            if ("error".equals(apiResults.get("status"))) {
+                throw new RuntimeException("API Error: " + apiResults.get("message"));
+            }
+
+            // ✅ FIX: Parse results correctly
+            @SuppressWarnings("unchecked")
+            Map<String, Object> task1Result = (Map<String, Object>) apiResults.get("task1");
+            @SuppressWarnings("unchecked")
+            Map<String, Object> task2Result = (Map<String, Object>) apiResults.get("task2");
+
+            // ✅ FIX: Extract scores from correct structure
+            Double task1Score = extractOverallBand(task1Result);
+            Double task2Score = extractOverallBand(task2Result);
+            Double overallScore = (Double) apiResults.get("overallScore");
+
+            System.out.println("\n--- SCORES TO SAVE ---");
+            System.out.println("Task 1 Score: " + task1Score);
+            System.out.println("Task 2 Score: " + task2Score);
+            System.out.println("Overall Score: " + overallScore);
+
+            // ✅ FIX: Save complete JSON results (not just message)
+            submission.setTask1Result(convertToJson(task1Result));
+            submission.setTask2Result(convertToJson(task2Result));
+            submission.setTask1Score(task1Score);
+            submission.setTask2Score(task2Score);
+            submission.setOverallScore(overallScore);
+            submission.setStatus("completed");
+            submission.setCompletedAt(java.time.LocalDateTime.now());
+
+            writingSubmissionRepo.save(submission);
+
+            System.out.println("✅ SUBMISSION COMPLETED & SAVED");
+            System.out.println("========================================\n");
+
         } catch (Exception e) {
-            System.err.println("========================================");
             System.err.println("❌ ERROR PROCESSING SUBMISSION: " + submissionUuid);
             System.err.println("   Error: " + e.getMessage());
             e.printStackTrace();
-            System.err.println("========================================\n");
-            
-            // Update status to failed
+
             try {
-                Optional<TestSubmission> optSubmission = submissionRepository.findBySubmissionUuid(submissionUuid);
+                Optional<WritingSubmission> optSubmission = writingSubmissionRepo
+                        .findBySubmissionUuid(submissionUuid);
                 if (optSubmission.isPresent()) {
-                    TestSubmission submission = optSubmission.get();
+                    WritingSubmission submission = optSubmission.get();
                     submission.setStatus("failed");
                     submission.setErrorMessage(e.getMessage());
-                    submission.setCompletedAt(LocalDateTime.now());
-                    submissionRepository.save(submission);
-                    System.out.println("💾 Submission marked as failed in database");
+                    submission.setCompletedAt(java.time.LocalDateTime.now());
+                    writingSubmissionRepo.save(submission);
                 }
             } catch (Exception ex) {
-                System.err.println("❌ Failed to update submission status: " + ex.getMessage());
+                System.err.println("❌ Failed to update status: " + ex.getMessage());
             }
         }
     }
-    
+
     /**
-     * Get submission by UUID
+     * ✅ NEW: Extract overall_band from API response
      */
-    public Optional<TestSubmission> getSubmission(String submissionUuid) {
-        return submissionRepository.findBySubmissionUuid(submissionUuid);
-    }
-    
-    /**
-     * Get all submissions by user
-     */
-    public List<TestSubmission> getUserSubmissions(User user) {
-        return submissionRepository.findByUserOrderBySubmittedAtDesc(user);
-    }
-    
-    /**
-     * Get pending submissions by user
-     */
-    public List<TestSubmission> getPendingSubmissions(Long userId) {
-        return submissionRepository.findPendingByUserId(userId);
-    }
-    
-    /**
-     * Get completed submissions by user
-     */
-    public List<TestSubmission> getCompletedSubmissions(Long userId) {
-        return submissionRepository.findCompletedByUserId(userId);
-    }
-    
-    /**
-     * Get user statistics
-     */
-    public Map<String, Object> getUserStats(User user) {
-        Map<String, Object> stats = new HashMap<>();
-        
-        long totalTests = submissionRepository.countByUser(user);
-        long completedTests = submissionRepository.countByUserAndStatus(user, "completed");
-        long processingTests = submissionRepository.countByUserAndStatus(user, "processing") +
-                               submissionRepository.countByUserAndStatus(user, "pending");
-        
-        Double avgScore = submissionRepository.getAverageScoreByUserId(user.getId());
-        
-        stats.put("totalTests", totalTests);
-        stats.put("completedTests", completedTests);
-        stats.put("processingTests", processingTests);
-        stats.put("averageScore", avgScore != null ? Math.round(avgScore * 10.0) / 10.0 : 0.0);
-        
-        return stats;
-    }
-    
-    /**
-     * Parse API result to get detailed feedback
-     */
-    public Map<String, Object> parseDetailedResult(String resultJson) {
-        try {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> result = objectMapper.readValue(resultJson, Map.class);
-            return result;
-        } catch (Exception e) {
-            System.err.println("❌ Error parsing result JSON: " + e.getMessage());
-            return new HashMap<>();
-        }
-    }
-    
-    /**
-     * Extract band score from API message
-     * Handles formats like:
-     * - "Band 7.0"
-     * - "Predicted score: Band 7.0"
-     * - "<h2>Band 7.0</h2>"
-     * - "Overall: **6.5**"
-     */
-    private Double extractScore(Object message) {
-        if (message == null) {
-            System.err.println("⚠️ Message is null, cannot extract score");
+    private Double extractOverallBand(Map<String, Object> apiResponse) {
+        if (apiResponse == null) {
+            System.err.println("⚠️ API response is null");
             return null;
         }
         
-        String messageStr = message.toString();
-        
-        // Remove HTML tags
-        messageStr = messageStr.replaceAll("<[^>]*>", "");
-        
-        // Try pattern 1: "Band X.X"
-        Pattern pattern1 = Pattern.compile("Band\\s+(\\d+\\.?\\d*)");
-        Matcher matcher1 = pattern1.matcher(messageStr);
-        if (matcher1.find()) {
-            try {
-                Double score = Double.parseDouble(matcher1.group(1));
-                System.out.println("   📊 Extracted score (Band format): " + score);
-                return score;
-            } catch (NumberFormatException e) {
-                System.err.println("   ⚠️ Could not parse band score: " + matcher1.group(1));
-            }
-        }
-        
-        // Try pattern 2: "Overall: **X.X**" or just numbers
-        Pattern pattern2 = Pattern.compile("(\\d+\\.\\d+)");
-        Matcher matcher2 = pattern2.matcher(messageStr);
-        if (matcher2.find()) {
-            try {
-                Double score = Double.parseDouble(matcher2.group(1));
-                // Only accept IELTS valid scores (0.0 - 9.0)
-                if (score >= 0.0 && score <= 9.0) {
-                    System.out.println("   📊 Extracted score (numeric format): " + score);
-                    return score;
+        try {
+            // Direct overall_band field
+            Object overallBand = apiResponse.get("overall_band");
+            if (overallBand != null) {
+                if (overallBand instanceof Number) {
+                    return ((Number) overallBand).doubleValue();
                 }
-            } catch (NumberFormatException e) {
-                // Ignore
+                if (overallBand instanceof String) {
+                    return Double.parseDouble((String) overallBand);
+                }
             }
+            
+            System.err.println("⚠️ No overall_band in response");
+            System.err.println("   Response keys: " + apiResponse.keySet());
+            System.err.println("   Response: " + apiResponse);
+            
+        } catch (Exception e) {
+            System.err.println("❌ Error extracting score: " + e.getMessage());
         }
         
-        System.err.println("   ⚠️ No valid band score found in message");
-        System.err.println("   Message preview: " + messageStr.substring(0, Math.min(100, messageStr.length())));
         return null;
     }
-    
+
     /**
-     * Retry failed submission
+     * Get all user submissions
      */
-    @Transactional
-    public void retrySubmission(String submissionUuid) {
-        Optional<TestSubmission> optSubmission = submissionRepository.findBySubmissionUuid(submissionUuid);
-        if (optSubmission.isPresent()) {
-            TestSubmission submission = optSubmission.get();
-            if (submission.isFailed()) {
-                submission.setStatus("pending");
-                submission.setErrorMessage(null);
-                submissionRepository.save(submission);
-                
-                // Process again
-                processSubmissionAsync(submissionUuid);
-                
-                System.out.println("🔄 Retrying failed submission: " + submissionUuid);
-            }
+    @Transactional(readOnly = true)
+    public List<ITestSubmission> getUserSubmissions(User user) {
+        List<ITestSubmission> allSubmissions = new ArrayList<>();
+
+        List<WritingSubmission> writingSubmissions = writingSubmissionRepo
+                .findByUserOrderBySubmittedAtDesc(user);
+        
+        for (WritingSubmission ws : writingSubmissions) {
+            writingTestRepo.findById(ws.getTestId()).ifPresent(ws::setTest);
+        }
+        
+        allSubmissions.addAll(writingSubmissions);
+
+        List<SpeakingSubmission> speakingSubmissions = speakingSubmissionRepo
+                .findByUserOrderBySubmittedAtDesc(user);
+        allSubmissions.addAll(speakingSubmissions);
+
+        allSubmissions.sort(Comparator.comparing(
+                ITestSubmission::getSubmittedAt, 
+                Comparator.nullsLast(Comparator.reverseOrder())
+        ));
+
+        return allSubmissions;
+    }
+
+    /**
+     * Get pending submissions
+     */
+    @Transactional(readOnly = true)
+    public List<ITestSubmission> getPendingSubmissions(User user) {
+        List<ITestSubmission> pending = new ArrayList<>();
+
+        List<WritingSubmission> writingPending = writingSubmissionRepo
+                .findByUserIdAndStatus(user.getId(), "pending");
+        for (WritingSubmission ws : writingPending) {
+            writingTestRepo.findById(ws.getTestId()).ifPresent(ws::setTest);
+        }
+        pending.addAll(writingPending);
+
+        List<WritingSubmission> writingProcessing = writingSubmissionRepo
+                .findByUserIdAndStatus(user.getId(), "processing");
+        for (WritingSubmission ws : writingProcessing) {
+            writingTestRepo.findById(ws.getTestId()).ifPresent(ws::setTest);
+        }
+        pending.addAll(writingProcessing);
+
+        pending.addAll(speakingSubmissionRepo
+                .findByUserIdAndStatus(user.getId(), "pending"));
+        pending.addAll(speakingSubmissionRepo
+                .findByUserIdAndStatus(user.getId(), "processing"));
+
+        return pending;
+    }
+
+    /**
+     * Get submission status
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> getSubmissionStatus(String submissionUuid) {
+        Map<String, Object> statusMap = new HashMap<>();
+
+        Optional<WritingSubmission> writingOpt = writingSubmissionRepo
+                .findBySubmissionUuid(submissionUuid);
+        
+        if (writingOpt.isPresent()) {
+            WritingSubmission submission = writingOpt.get();
+            writingTestRepo.findById(submission.getTestId()).ifPresent(submission::setTest);
+            
+            statusMap.put("submissionUuid", submissionUuid);
+            statusMap.put("testType", "writing");
+            statusMap.put("status", submission.getStatus());
+            statusMap.put("overallScore", submission.getOverallScore());
+            statusMap.put("task1Score", submission.getTask1Score());
+            statusMap.put("task2Score", submission.getTask2Score());
+            statusMap.put("completedAt", submission.getCompletedAt());
+            statusMap.put("errorMessage", submission.getErrorMessage());
+            return statusMap;
+        }
+
+        Optional<SpeakingSubmission> speakingOpt = speakingSubmissionRepo
+                .findBySubmissionUuid(submissionUuid);
+        
+        if (speakingOpt.isPresent()) {
+            SpeakingSubmission submission = speakingOpt.get();
+            statusMap.put("submissionUuid", submissionUuid);
+            statusMap.put("testType", "speaking");
+            statusMap.put("status", submission.getStatus());
+            statusMap.put("overallScore", submission.getOverallScore());
+            statusMap.put("completedAt", submission.getCompletedAt());
+            statusMap.put("errorMessage", submission.getErrorMessage());
+            return statusMap;
+        }
+
+        statusMap.put("error", "Submission not found");
+        return statusMap;
+    }
+
+    /**
+     * Get user statistics
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> getUserStats(User user) {
+        Map<String, Object> stats = new HashMap<>();
+
+        long writingTotal = writingSubmissionRepo.countByUser(user);
+        long writingCompleted = writingSubmissionRepo.countByUserAndStatus(user, "completed");
+        long writingProcessing = writingSubmissionRepo.countByUserAndStatus(user, "pending") +
+                                 writingSubmissionRepo.countByUserAndStatus(user, "processing");
+        Double writingAvg = writingSubmissionRepo.getAverageScoreByUserId(user.getId());
+
+        long speakingTotal = speakingSubmissionRepo.countByUser(user);
+        long speakingCompleted = speakingSubmissionRepo.countByUserAndStatus(user, "completed");
+        long speakingProcessing = speakingSubmissionRepo.countByUserAndStatus(user, "pending") +
+                                  speakingSubmissionRepo.countByUserAndStatus(user, "processing");
+        Double speakingAvg = speakingSubmissionRepo.getAverageScoreByUserId(user.getId());
+
+        stats.put("totalTests", writingTotal + speakingTotal);
+        stats.put("completedTests", writingCompleted + speakingCompleted);
+        stats.put("processingTests", writingProcessing + speakingProcessing);
+        
+        Double overallAvg = 0.0;
+        int count = 0;
+        if (writingAvg != null) {
+            overallAvg += writingAvg;
+            count++;
+        }
+        if (speakingAvg != null) {
+            overallAvg += speakingAvg;
+            count++;
+        }
+        if (count > 0) {
+            overallAvg = Math.round((overallAvg / count) * 10.0) / 10.0;
+        }
+        
+        stats.put("averageScore", count > 0 ? overallAvg : 0.0);
+
+        return stats;
+    }
+
+    /**
+     * Get submission by UUID
+     */
+    @Transactional(readOnly = true)
+    public Optional<ITestSubmission> getSubmission(String submissionUuid) {
+        Optional<WritingSubmission> writingOpt = writingSubmissionRepo
+                .findBySubmissionUuid(submissionUuid);
+        if (writingOpt.isPresent()) {
+            WritingSubmission ws = writingOpt.get();
+            writingTestRepo.findById(ws.getTestId()).ifPresent(ws::setTest);
+            return Optional.of(ws);
+        }
+
+        Optional<SpeakingSubmission> speakingOpt = speakingSubmissionRepo
+                .findBySubmissionUuid(submissionUuid);
+        return speakingOpt.map(s -> (ITestSubmission) s);
+    }
+
+    /**
+     * Parse detailed result from JSON string
+     */
+    public Map<String, Object> parseDetailedResult(String jsonResult) {
+        if (jsonResult == null || jsonResult.isEmpty()) {
+            return new HashMap<>();
+        }
+
+        try {
+            return objectMapper.readValue(jsonResult, Map.class);
+        } catch (Exception e) {
+            System.err.println("Error parsing result JSON: " + e.getMessage());
+            return new HashMap<>();
+        }
+    }
+
+    /**
+     * Convert object to JSON string
+     */
+    private String convertToJson(Object obj) {
+        try {
+            return objectMapper.writeValueAsString(obj);
+        } catch (Exception e) {
+            System.err.println("Error converting to JSON: " + e.getMessage());
+            return "{}";
         }
     }
 }

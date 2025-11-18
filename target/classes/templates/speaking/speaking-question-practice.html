@@ -8,27 +8,26 @@
     <link rel="stylesheet" th:href="@{/css/style.css}">
     <link rel="stylesheet" th:href="@{/css/header.css}">
     <link rel="stylesheet" th:href="@{/css/footer.css}">
-    <link rel="stylesheet" th:href="@{/css/practice-page.css}">
-    <style>
-        /* Inline styling for the microphone button */
-        .microphone-button {
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            background-color: #f44336;
-            color: white;
-            font-size: 40px;
-            border: none;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        .microphone-button:hover {
-            background-color: #d32f2f;
-        }
-        .microphone-button.recording {
-            background-color: #388e3c; /* Green when recording */
-        }
-    </style>
+    <link rel="stylesheet" th:href="@{/css/practice-page.css}"> <style>
+    /* Inline styling for the microphone button */
+    .microphone-button {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        background-color: #f44336;
+        color: white;
+        font-size: 40px;
+        border: none;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+    .microphone-button:hover {
+        background-color: #d32f2f;
+    }
+    .microphone-button.recording {
+        background-color: #388e3c; /* Green when recording */
+    }
+</style>
 </head>
 <body>
 <header th:replace="~{fragments/header :: header}"></header>
@@ -90,40 +89,14 @@
         let audioChunks = [];
         let isRecording = false;
 
-        // --- Core Upload Function (Talks to the Spring endpoint /api/upload-audio) ---
+        // Placeholder for the actual upload function (Simulated)
         async function uploadAudio(audioBlob) {
             statusElement.textContent = "Uploading recording to server...";
-
-            const formData = new FormData();
-            // "audioFile" must match the @RequestParam in the Java controller
-            formData.append("audioFile", audioBlob, "speaking_answer.webm");
-
-            try {
-                const response = await fetch('/api/upload-audio', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                if (!response.ok) {
-                    // Log the error response status (e.g., 500)
-                    const errorText = await response.text();
-                    console.error("Upload failed on server. Status:", response.status, "Response:", errorText);
-                    throw new Error('Upload failed with status ' + response.status);
-                }
-
-                const result = await response.json();
-                // Return the local file path ("file:///...") needed by UrlResource in the service
-                return result.fileUrl;
-
-            } catch (error) {
-                console.error("Upload error:", error);
-                statusElement.textContent = "Upload failed. Check console.";
-                return null;
-            }
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            return 'SERVER_URL/recording_' + Date.now() + '.webm';
         }
-        // --------------------------------------------------------------------------
 
-        // --- MediaRecorder Setup ---
+        // --- MediaRecorder Setup (Remaining the same) ---
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
             navigator.mediaDevices.getUserMedia({ audio: true })
                 .then(stream => {
@@ -142,8 +115,6 @@
                         if (finishButton) finishButton.disabled = true;
 
                         const audioBlob = new Blob(audioChunks, { 'type' : 'audio/webm' });
-
-                        // CALL THE UPLOAD FUNCTION
                         const serverUrl = await uploadAudio(audioBlob);
 
                         if (serverUrl) {
@@ -156,7 +127,7 @@
                             audioPlayback.src = audioUrl;
                             audioPlayback.style.display = 'block';
                         } else {
-                            statusElement.textContent = "Upload failed. Please record again.";
+                            statusElement.textContent = "Upload failed. Please try again.";
                         }
                         audioChunks = [];
                     };

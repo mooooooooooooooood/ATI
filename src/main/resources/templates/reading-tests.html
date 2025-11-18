@@ -1,68 +1,102 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>[[${pageTitle}]]</title>
-    <style>
-        .test-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            padding: 20px;
-        }
-        .test-card {
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            padding: 15px;
-            box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
-            transition: transform 0.2s;
-            cursor: pointer;
-        }
-        .test-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 4px 4px 10px rgba(0,0,0,0.2);
-        }
-        .test-title {
-            font-size: 1.2em;
-            font-weight: bold;
-            color: #007bff;
-            margin-bottom: 5px;
-        }
-        .test-info {
-            font-size: 0.9em;
-            color: #666;
-        }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${pageTitle} ?: 'Reading Test Collection'">Reading Test Collection - EO.EO</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/test-collection.css}">
+    <link rel="stylesheet" th:href="@{/css/header.css}">
+    <link rel="stylesheet" th:href="@{/css/footer.css}">
 </head>
 <body>
+    <!-- Header -->
+    <header th:replace="~{fragments/header :: header}"></header>
 
-<h1>IELTS Reading Tests Available</h1>
-<p>Total Tests: <span th:text="${testCount}">55</span></p>
+    <!-- Main Content -->
+    <main class="test-collection-page">
+        <div class="container">
+            <h1 class="page-title">Reading test collection</h1>
+            
+            <div class="content-wrapper">
+                <!-- Sidebar -->
+                <aside class="sidebar">
+                    <div class="filter-section">
+                        <h3>Search</h3>
+                        <div class="search-box-sidebar">
+                            <input type="text" placeholder="Search by test name..." id="sidebarSearch">
+                            <button id="searchButton">&#128269;</button>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-section">
+                        <h3>Test Level</h3>
+                        <label class="checkbox-option">
+                            <input type="checkbox" name="level" value="Academic" id="levelAcademic">
+                            <span>Academic</span>
+                        </label>
+                        <label class="checkbox-option">
+                            <input type="checkbox" name="level" value="General" id="levelGeneral">
+                            <span>General Training</span>
+                        </label>
+                    </div>
 
-<div class="test-grid">
-    <th:block th:if="${not #lists.isEmpty(tests)}">
-        <div th:each="test : ${tests}" class="test-card">
+                    <div class="filter-section">
+                        <button class="btn-clear-filters" id="clearFiltersBtn">Clear Filters</button>
+                    </div>
+                </aside>
 
-            <a th:href="@{/reading/tests/{id}(id=${test.id})}" style="text-decoration: none; color: inherit;">
-
-                <div class="test-title">
-                    <span th:text="${test.testName}">Sample Test Name</span>
-                </div>
-
-                <div class="test-info">
-                    Level: <span th:text="${test.testLevel}">Academic</span>
-                </div>
-                <div class="test-info">
-                    Test ID: <span th:text="${test.id}">1</span>
-                </div>
-            </a>
+                <!-- Test Grid -->
+                <section class="test-grid" id="readingTestGrid">
+                    <!-- Tests from backend -->
+                    <div class="test-card" 
+                         th:each="test : ${tests}"
+                         th:attr="data-test-id=${test.id},
+                                  data-test-level=${test.testLevel.name()},
+                                  data-test-name=${test.testName}">
+                        <div class="test-thumbnail">
+                            <img th:src="@{/images/reading.png}" 
+                                 th:alt="${test.testName}"
+                                 onerror="this.src='/images/Logo.png'">
+                        </div>
+                        <h3 th:text="${test.testName}">IELTS Reading Test 1</h3>
+                        <p class="test-level">
+                            <span th:if="${test.testLevel.name() == 'Academic'}">Academic</span>
+                            <span th:if="${test.testLevel.name() == 'General'}">General Training</span>
+                        </p>
+                        <button class="btn-do-test" 
+                                th:onclick="|window.location.href='/reading/tests/${test.id}'|">
+                            <span class="icon">&#128214;</span> Do the test
+                        </button>
+                    </div>
+                    
+                    <!-- Show message if no tests -->
+                    <div th:if="${#lists.isEmpty(tests)}" 
+                         style="grid-column: 1 / -1; text-align: center; padding: 60px 20px;">
+                        <h3 style="font-size: 24px; color: #666; margin-bottom: 10px;">
+                            &#128218; No reading tests available
+                        </h3>
+                        <p style="color: #999;">
+                            Please run the SQL insertion script or contact support
+                        </p>
+                    </div>
+                </section>
+            </div>
+            
+            <!-- Test Statistics -->
+            <div class="test-stats" th:if="${testCount > 0}" 
+                 style="text-align: center; margin-top: 20px; color: #666;">
+                <p>Total: <span th:text="${testCount}">0</span> reading tests available</p>
+            </div>
         </div>
-    </th:block>
+    </main>
 
-    <th:block th:unless="${not #lists.isEmpty(tests)}">
-        <p>No reading tests found in the database. Please run the SQL insertion script.</p>
-    </th:block>
-</div>
+    <!-- Footer -->
+    <footer th:replace="~{fragments/footer :: footer}"></footer>
 
+    <!-- Scripts -->
+    <script th:src="@{/js/header.js}" defer></script>
+    <script th:src="@{/js/main.js}"></script>
+    <script th:src="@{/js/reading-test-collection.js}"></script>
 </body>
 </html>
