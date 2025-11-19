@@ -20,14 +20,11 @@
             font-family: 'Segoe UI', Roboto, sans-serif;
             background-color: #f3f4f6;
         }
-
-        /* Custom Scrollbar for aesthetics */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-        /* Animations */
         @keyframes fade-in-up {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
@@ -46,31 +43,40 @@
             <h2 class="text-gray-500 uppercase tracking-widest font-semibold text-sm mb-2">IELTS Reading Test Results</h2>
             <h1 class="text-2xl md:text-3xl font-bold text-gray-900 mb-8" th:text="${testName}">Test Title Placeholder</h1>
 
-            <div class="flex flex-col md:flex-row justify-center items-center gap-8 md:gap-16">
+            <div class="flex flex-col md:flex-row justify-center items-center gap-10 md:gap-16">
 
-                <div class="relative w-40 h-40 flex items-center justify-center">
+                <div class="relative w-32 h-32 flex items-center justify-center">
                     <div class="absolute inset-0 rounded-full border-4 border-gray-100"></div>
                     <div class="absolute inset-0 rounded-full border-4 border-red-600 border-t-transparent animate-spin" style="animation-duration: 3s;"></div>
-
-                    <div class="flex flex-col items-center">
-                        <span class="text-5xl font-extrabold text-gray-900" th:text="${score}">0</span>
-                        <span class="text-gray-400 font-medium text-sm uppercase mt-1">out of <span th:text="${totalQuestions}">40</span></span>
+                    <div class="flex flex-col items-center z-10">
+                        <span class="text-4xl font-extrabold text-gray-900" th:text="${score}">0</span>
+                        <span class="text-gray-400 font-medium text-xs uppercase mt-1">Raw Score</span>
                     </div>
                 </div>
 
-                <div class="text-left space-y-2">
+                <div class="relative w-40 h-40 flex items-center justify-center transform scale-110">
+                    <div class="absolute inset-0 rounded-full border-4 border-gray-100 bg-red-50"></div>
+                    <div class="absolute inset-0 rounded-full border-4 border-red-600 border-l-transparent border-r-transparent animate-pulse"></div>
+                    <div class="flex flex-col items-center z-10">
+                        <span class="text-5xl font-black text-red-700" th:text="${bandScore}">0.0</span>
+                        <span class="text-red-800 font-bold text-sm uppercase mt-1 tracking-wide">Band Score</span>
+                    </div>
+                </div>
+
+                <div class="text-left space-y-3 md:ml-4">
                     <div class="text-lg">
-                        You correctly answered <span class="font-bold text-green-600" th:text="${score}">0</span> questions.
+                        You correctly answered <span class="font-bold text-green-600" th:text="${score}">0</span> out of <span th:text="${totalQuestions}">40</span>.
                     </div>
                     <div class="text-sm text-gray-500 max-w-xs">
                         Review your answers below to understand your mistakes and improve your band score.
                     </div>
-                    <div class="pt-4">
-                        <a th:href="@{/reading/tests}" class="inline-flex items-center px-6 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg transition shadow-md text-sm font-medium">
+                    <div class="pt-2">
+                        <a th:href="@{/reading/tests}" class="inline-flex items-center px-5 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg transition shadow-md text-sm font-medium">
                             <i class="fas fa-arrow-left mr-2"></i> Back to Test List
                         </a>
                     </div>
                 </div>
+
             </div>
         </div>
     </div>
@@ -147,7 +153,16 @@
                         <div class="flex-grow">
                             <div class="mb-2">
                                 <span class="font-bold text-gray-900 mr-2" th:text="${result.questionOrder} + '.'">1.</span>
-                                <span class="text-gray-800" th:text="${result.questionText}">Question text placeholder</span>
+
+                                <th:block th:if="${!isSummaryCompletion}">
+                                    <span class="text-gray-800" th:text="${result.questionText}">Question text</span>
+                                </th:block>
+
+                                <th:block th:if="${isSummaryCompletion}">
+                                    <span class="text-gray-800 italic">
+                                        (Summary Completion) <span th:text="${result.questionText}"></span>
+                                    </span>
+                                </th:block>
                             </div>
 
                             <div class="flex flex-wrap items-center gap-3 mt-3">

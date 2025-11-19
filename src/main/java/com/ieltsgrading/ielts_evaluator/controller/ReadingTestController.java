@@ -98,6 +98,7 @@ public class ReadingTestController {
         // Add indexed questions for Thymeleaf iteration
         List<Map<String, Object>> indexedQuestions = new ArrayList<>();
         int globalIndex = 0;
+        boolean isFirstQuestionOfPassage = true;
         for (ReadingPassage passage : test.getPassages()) {
             for (ReadingQuestionGroup group : passage.getQuestionGroups()) {
                 for (ReadingQuestion question : group.getQuestions()) {
@@ -106,6 +107,10 @@ public class ReadingTestController {
                     questionData.put("question", question);
                     questionData.put("group", group);
                     questionData.put("passage", passage);
+                    questionData.put("isStartOfPassage", isFirstQuestionOfPassage);
+
+                    // ✅ CRITICAL: Set flag to false for all subsequent questions in this passage
+                    isFirstQuestionOfPassage = false;
                     indexedQuestions.add(questionData);
                     globalIndex++;
                 }
