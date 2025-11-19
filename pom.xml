@@ -103,6 +103,17 @@
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
+            <dependency>
+                <groupId>com.google.cloud</groupId>
+                <artifactId>google-cloud-vertexai</artifactId>
+                <version>0.13.0</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.mpatric</groupId>
+                <artifactId>mp3agic</artifactId>
+                <version>0.9.1</version>
+            </dependency>
 		</dependencies>
 	</dependencyManagement>
 
