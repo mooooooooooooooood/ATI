@@ -59,6 +59,11 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-webflux</artifactId>
 		</dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.19.2</version>
+        </dependency>
 		<dependency>
 			<groupId>de.codecentric</groupId>
 			<artifactId>spring-boot-admin-starter-server</artifactId>
@@ -98,6 +103,17 @@
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
+            <dependency>
+                <groupId>com.google.cloud</groupId>
+                <artifactId>google-cloud-vertexai</artifactId>
+                <version>0.13.0</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.mpatric</groupId>
+                <artifactId>mp3agic</artifactId>
+                <version>0.9.1</version>
+            </dependency>
 		</dependencies>
 	</dependencyManagement>
 

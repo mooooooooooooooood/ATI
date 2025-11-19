@@ -1,11 +1,14 @@
 package com.ieltsgrading.ielts_evaluator.controller;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ieltsgrading.ielts_evaluator.dto.ReadingSubmissionDTO;
+import com.ieltsgrading.ielts_evaluator.dto.reading.ReadingSubmissionDTO;
+import com.ieltsgrading.ielts_evaluator.dto.reading.ReviewResponseDTO;
 import com.ieltsgrading.ielts_evaluator.model.*;
-import com.ieltsgrading.ielts_evaluator.repository.ReadingQuestionRepository;
-import com.ieltsgrading.ielts_evaluator.repository.ReadingTestRepository;
-import com.ieltsgrading.ielts_evaluator.repository.ReadingUserAnswerRepository;
+import com.ieltsgrading.ielts_evaluator.model.reading.*;
+import com.ieltsgrading.ielts_evaluator.repository.reading.ReadingQuestionRepository;
+import com.ieltsgrading.ielts_evaluator.repository.reading.ReadingTestRepository;
+import com.ieltsgrading.ielts_evaluator.repository.reading.ReadingUserAnswerRepository;
 import com.ieltsgrading.ielts_evaluator.service.ReadingTestService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,7 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.ModelAndView;
-import com.fasterxml.jackson.core.type.TypeReference;
 
 
 import java.util.*;
@@ -47,6 +49,7 @@ public class ReadingTestController {
         model.addAttribute("user", user);
         model.addAttribute("tests", testRepository.findAll());
         model.addAttribute("testCount", testRepository.count());
+
 
         return "reading-tests";
     }
@@ -161,21 +164,26 @@ public class ReadingTestController {
         }
 
         // Delegate all core logic (saving answers, scoring, calling API) to the Service layer
-        return readingTestService.processAndGradeSubmission(submissionDTO);
-    }
-    @PostMapping("/get-explanation")
-    @ResponseBody
-    public Map<String, String> getExplanationForQuestion(
-            @RequestParam("questionId") int questionId,
-            @RequestParam("userResponse") String userResponse,
-            @RequestParam("correctAnswer") String correctAnswer)
-    {
-        // Calls the service method which now performs the Gemini API request
-        String explanation = readingTestService.fetchSingleExplanation(
-                questionId, userResponse, correctAnswer
-        );
+        ModelAndView mav = readingTestService.processAndGradeSubmission(submissionDTO);
 
-        // Returns a JSON object like {"explanation": "The concise feedback text..."}
-        return Map.of("explanation", explanation);
+        // ⭐ CRITICAL FIX: Ensure the testId is added to the model for the Thymeleaf template to access.
+        mav.addObject("testId", submissionDTO.getTestId());
+
+        return mav;
+    }
+
+    // 3. ASYNCHRONOUS BULK REVIEW ENDPOINT
+    @PostMapping("/get-test-review/{testId}")
+    @ResponseBody
+    public ReviewResponseDTO getTestReview(@PathVariable("testId") int testId) {
+        // Calls the service method which performs the single, comprehensive API request
+        ReviewResponseDTO review = readingTestService.getTestReview(testId);
+
+        // If the service failed (returns null), return an empty DTO to prevent JSON parsing errors on the client
+        if (review == null) {
+            return new ReviewResponseDTO();
+        }
+
+        return review;
     }
 }

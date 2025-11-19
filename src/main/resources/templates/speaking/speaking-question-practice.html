@@ -1,439 +1,359 @@
 <!DOCTYPE html>
-<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title th:text="${pageTitle} ?: 'Question Practice'">IELTS Practice</title>
+    <title th:text="${pageTitle} ?: 'Speaking Practice'">IELTS Practice</title>
 
-    <link rel="stylesheet" th:href="@{/css/style.css}">
-    <link rel="stylesheet" th:href="@{/css/header.css}">
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" th:href="@{/css/footer.css}">
+    <link rel="stylesheet" th:href="@{/css/header.css}">
+    <link rel="stylesheet" th:href="@{/css/index.css}">
     <link rel="stylesheet" th:href="@{/css/practice-page.css}">
-    
     <style>
-        /* ✅ Container chính */
-        .practice-page {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 40px 20px;
+        :root {
+            --brand-red: #dc2626;
+            --brand-dark: #7f1d1d;
+            --brand-amber: #f59e0b;
         }
 
-        /* ✅ Phần hiển thị câu hỏi - CĂN GIỮA */
-        .question-display-area {
-            text-align: center;
-            margin-bottom: 40px;
+        body {
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            background-color: #f3f4f6;
         }
 
-        .question-display-area h1 {
-            font-size: 32px;
-            color: #333;
-            margin-bottom: 30px;
-            font-weight: 700;
+        /* Recording Pulse (Red) */
+        @keyframes pulse-ring-red {
+            0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(220, 38, 38, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
         }
 
-        .question-container {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 20px;
-            padding: 40px;
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
-            margin: 0 auto;
-            max-width: 800px;
+        /* Preparation Pulse (Yellow) */
+        @keyframes pulse-ring-yellow {
+            0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(245, 158, 11, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
         }
 
-        .question-container h2 {
-            color: white;
-            font-size: 20px;
-            margin-bottom: 20px;
-            font-weight: 600;
-            opacity: 0.95;
+        .recording-active {
+            animation: pulse-ring-red 2s infinite;
+            background-color: var(--brand-red) !important;
+            color: white !important;
+            border-color: var(--brand-red) !important;
         }
 
-        .question-text {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 30px;
-            border-radius: 15px;
-            font-size: 22px;
-            line-height: 1.6;
-            color: #333;
-            font-weight: 500;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            text-align: center;
-            margin: 0;
+        .prep-active {
+            animation: pulse-ring-yellow 2s infinite;
+            background-color: var(--brand-amber) !important;
+            color: white !important;
+            border-color: var(--brand-amber) !important;
         }
 
-        /* ✅ Phần recording - CĂN GIỮA */
-        .recording-area {
-            text-align: center;
-            padding: 40px 20px;
-            background: #f8f9fa;
-            border-radius: 20px;
-            max-width: 600px;
-            margin: 0 auto;
+        #timerBar {
+            transition: width 1s linear;
         }
 
-        /* Microphone button styling */
-        .microphone-button {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            background-color: #f44336;
-            color: white;
-            font-size: 50px;
-            border: none;
-            cursor: pointer;
-            transition: all 0.3s;
-            box-shadow: 0 8px 20px rgba(244, 67, 54, 0.4);
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .microphone-button:hover {
-            background-color: #d32f2f;
-            transform: scale(1.05);
-            box-shadow: 0 10px 25px rgba(244, 67, 54, 0.5);
-        }
-        
-        .microphone-button:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
-            transform: scale(1);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-        
-        .microphone-button.recording {
-            background-color: #4caf50;
-            animation: pulse 1.5s infinite;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { 
-                box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
-                transform: scale(1);
-            }
-            50% { 
-                box-shadow: 0 0 0 20px rgba(76, 175, 80, 0);
-                transform: scale(1.05);
-            }
-        }
-        
-        #status {
-            font-size: 18px;
-            margin-bottom: 30px;
-            min-height: 28px;
-            color: #666;
-            font-weight: 500;
-        }
-        
-        #status.recording {
-            color: #4caf50;
-            font-weight: bold;
-            font-size: 20px;
-        }
-        
-        #status.uploading {
-            color: #2196f3;
-            font-weight: bold;
-        }
-        
-        #status.error {
-            color: #f44336;
-            font-weight: bold;
-        }
-        
-        #audioPlayback {
-            margin: 30px auto 20px;
-            display: block;
-            max-width: 100%;
-            border-radius: 25px;
-        }
-        
-        /* ✅ Buttons - CĂN GIỮA */
-        .btn-primary, .btn-success {
-            padding: 15px 50px;
-            border-radius: 30px;
-            font-size: 18px;
-            font-weight: 600;
-            border: none;
-            cursor: pointer;
-            transition: all 0.3s;
-            margin-top: 30px;
-            display: inline-block;
-        }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-        
-        .btn-success {
-            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-            color: white;
-            box-shadow: 0 5px 15px rgba(67, 233, 123, 0.4);
-        }
-        
-        .btn-primary:hover, .btn-success:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
-        }
-        
-        .btn-primary:disabled, .btn-success:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-
-        /* ✅ Responsive */
-        @media (max-width: 768px) {
-            .question-container {
-                padding: 25px;
-            }
-
-            .question-text {
-                font-size: 18px;
-                padding: 20px;
-            }
-
-            .question-display-area h1 {
-                font-size: 26px;
-            }
-
-            .microphone-button {
-                width: 100px;
-                height: 100px;
-                font-size: 40px;
-            }
-
-            .btn-primary, .btn-success {
-                padding: 12px 35px;
-                font-size: 16px;
-            }
-        }
+        /* Bouncing dots for the modal */
+        .bounce-delay-1 { animation-delay: 0.1s; }
+        .bounce-delay-2 { animation-delay: 0.2s; }
+        .bounce-delay-3 { animation-delay: 0.3s; }
     </style>
 </head>
-<body>
-    <header th:replace="~{fragments/header :: header}"></header>
+<body class="flex flex-col min-h-screen text-gray-800">
 
-    <main class="practice-page container">
-        <div class="question-display-area">
-            <h1 th:text="${pageTitle}">Part X Practice</h1>
+<header th:replace="~{fragments/header :: header}"></header>
 
-            <div class="question-container">
-                <h2>Read the question below:</h2>
-                <p class="question-text" th:text="${questionText}">[Placeholder Question Text]</p>
+<main class="flex-grow flex items-center justify-center py-12 px-4">
+
+    <div class="bg-white w-full max-w-3xl rounded-2xl shadow-xl overflow-hidden border-t-8 border-red-600 z-10">
+
+        <div class="bg-gray-50 px-8 py-6 border-b border-gray-100 flex justify-between items-center">
+            <h1 class="text-xl font-bold text-gray-700 uppercase tracking-wide" th:text="${pageTitle}">
+                IELTS Speaking Practice
+            </h1>
+            <span id="statusBadge" class="bg-gray-200 text-gray-600 text-xs font-bold px-3 py-1 rounded-full uppercase">
+                Ready
+            </span>
+        </div>
+
+        <div class="p-10 text-center">
+
+            <h2 class="text-sm font-semibold text-gray-400 uppercase mb-3">Your Question</h2>
+            <p class="text-3xl font-medium text-gray-900 leading-snug mb-6" th:text="${questionText}">
+                Describe a memorable journey you have taken.
+            </p>
+
+            <div th:if="${#strings.contains(pageTitle, 'Part 2')}" class="mb-8">
+                <p class="inline-flex items-center gap-2 px-4 py-2 bg-amber-50 text-amber-700 rounded-lg border border-amber-200 text-sm font-medium">
+                    <i class="fas fa-clock"></i> 1 Minute Preparation &bull; 2 Minutes Speaking
+                </p>
+            </div>
+
+            <div class="mb-8 relative">
+                <div class="text-5xl font-mono font-bold text-gray-700 mb-2" id="timerText">00:00</div>
+                <p class="text-sm text-gray-400" id="statusText">Loading...</p>
+
+                <div class="w-full bg-gray-200 rounded-full h-2 mt-4 overflow-hidden">
+                    <div id="timerBar" class="bg-gray-400 h-2 rounded-full" style="width: 100%;"></div>
+                </div>
+            </div>
+
+            <div class="flex flex-col items-center justify-center gap-6">
+
+                <button id="actionButton" class="group relative flex items-center justify-center w-24 h-24 bg-white border-4 border-gray-200 rounded-full text-gray-400 hover:border-red-400 hover:text-red-500 transition-all duration-300 focus:outline-none">
+                    <i id="btnIcon" class="fas fa-microphone text-3xl"></i>
+                </button>
+
+                <audio id="audioPlayback" controls class="w-full max-w-md hidden rounded-lg shadow-sm"></audio>
+
+                <form id="nextQuestionForm" method="POST" th:action="@{/speaking/next}" class="w-full">
+                    <input type="hidden" name="answerUrl" id="answerUrlField">
+
+                    <div class="flex justify-center gap-4 mt-4">
+                        <button type="submit"
+                                th:if="${hasNext}"
+                                id="nextButton"
+                                class="hidden px-8 py-3 bg-gray-800 text-white font-semibold rounded-lg hover:bg-gray-900 transition shadow-lg flex items-center gap-2"
+                                disabled>
+                            <span>Next Question</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </button>
+
+                        <button type="button"
+                                th:if="${!hasNext}"
+                                id="finishButton"
+                                class="hidden px-8 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition shadow-lg flex items-center gap-2"
+                                disabled>
+                            <span>Finish Test</span>
+                            <i class="fas fa-flag-checkered"></i>
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
 
-        <div class="recording-area">
-            <p id="status">Click the microphone to start recording...</p>
-
-            <button id="recordButton" class="microphone-button" disabled>
-                🎙️
-            </button>
-
-            <audio id="audioPlayback" controls style="display: none;"></audio>
-
-            <form id="nextQuestionForm" method="POST" th:action="@{/speaking/next}">
-                <input type="hidden" name="answerUrl" id="answerUrlField">
-
-                <button type="submit"
-                        th:if="${hasNext}"
-                        id="nextButton"
-                        class="btn-primary"
-                        disabled>
-                    Next Question →
-                </button>
-
-                <button type="submit"
-                        th:if="${!hasNext}"
-                        id="finishButton"
-                        class="btn-success"
-                        disabled>
-                    Finish Test ✓
-                </button>
-            </form>
+        <div class="bg-gray-50 px-6 py-4 border-t border-gray-100 text-center text-sm text-gray-500">
+            Speak clearly and fluently. You cannot pause once recording starts.
         </div>
-    </main>
+    </div>
 
-    <footer th:replace="~{fragments/footer :: footer}"></footer>
+    <div id="gradingModal" class="fixed inset-0 bg-gray-900 bg-opacity-60 backdrop-blur-sm z-50 hidden flex items-center justify-center transition-opacity duration-300">
+        <div class="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl border-4 border-red-100 transform transition-transform hover:scale-105">
 
-    <script>
-        // ========================================
-        // ✅ UPDATED: Real Audio Recording & Upload
-        // ========================================
-        
-        const recordButton = document.getElementById('recordButton');
-        const statusElement = document.getElementById('status');
+            <div class="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce">
+                <i class="fas fa-robot text-4xl text-red-500"></i>
+            </div>
+
+            <h3 class="text-2xl font-bold text-gray-800 mb-3">Analyzing...</h3>
+
+            <p class="text-gray-600 mb-6 leading-relaxed">
+                Please wait about <span class="font-bold text-red-500">5 minutes</span> while our AI grades your test. <br>
+                <span class="text-sm text-gray-400">(Do not close this window)</span>
+            </p>
+
+            <div class="flex justify-center gap-3 mb-2">
+                <div class="w-4 h-4 bg-red-400 rounded-full animate-bounce bounce-delay-1"></div>
+                <div class="w-4 h-4 bg-red-500 rounded-full animate-bounce bounce-delay-2"></div>
+                <div class="w-4 h-4 bg-red-600 rounded-full animate-bounce bounce-delay-3"></div>
+            </div>
+        </div>
+    </div>
+
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        const PAGE_TITLE = /*[[${pageTitle}]]*/ 'Part 1 Practice';
+        const IS_PART_2 = PAGE_TITLE && PAGE_TITLE.includes("Part 2");
+        /*]]>*/
+
+        // --- Configuration ---
+        const PREP_TIME = 60;
+        const SPEAK_TIME_SHORT = 60;
+        const SPEAK_TIME_LONG = 120;
+
+        // --- Elements ---
+        const actionButton = document.getElementById('actionButton');
+        const btnIcon = document.getElementById('btnIcon');
+        const statusText = document.getElementById('statusText');
+        const timerText = document.getElementById('timerText');
+        const timerBar = document.getElementById('timerBar');
+        const statusBadge = document.getElementById('statusBadge');
         const audioPlayback = document.getElementById('audioPlayback');
         const nextButton = document.getElementById('nextButton');
         const finishButton = document.getElementById('finishButton');
         const answerUrlField = document.getElementById('answerUrlField');
+        const gradingModal = document.getElementById('gradingModal');
+        const questionForm = document.getElementById('nextQuestionForm');
 
+        // --- State ---
         let mediaRecorder;
         let audioChunks = [];
-        let isRecording = false;
+        let timerInterval;
+        let currentState = 'IDLE';
 
-        /**
-         * ✅ Upload audio to server
-         */
-        async function uploadAudio(audioBlob) {
-            statusElement.textContent = "⏳ Uploading recording to server...";
-            statusElement.className = "uploading";
-            
-            try {
-                const formData = new FormData();
-                formData.append('audio', audioBlob, 'recording.webm');
-                
-                console.log('📤 Uploading audio blob:', audioBlob.size, 'bytes');
-                
-                const response = await fetch('/api/upload/audio', {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                console.log('📥 Response status:', response.status);
-                console.log('📥 Response headers:', [...response.headers.entries()]);
-                
-                const result = await response.json();
-                console.log('📥 Response body:', result);
-                
-                if (!response.ok) {
-                    throw new Error('Upload failed with status: ' + response.status + ' - ' + JSON.stringify(result));
-                }
-                
-                if (result.success) {
-                    console.log('✅ Upload successful:', result);
-                    return result.filePath;
-                } else {
-                    throw new Error(result.error || 'Upload failed');
-                }
-                
-            } catch (error) {
-                console.error('❌ Upload error:', error);
-                console.error('❌ Error stack:', error.stack);
-                statusElement.textContent = '❌ Upload failed: ' + error.message;
-                statusElement.className = "error";
-                return null;
-            }
-        }
-
-        /**
-         * ✅ Initialize MediaRecorder
-         */
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            console.log('🎤 Requesting microphone access...');
-            
-            navigator.mediaDevices.getUserMedia({ audio: true })
-                .then(stream => {
-                    console.log('✅ Microphone access granted');
-                    
-                    mediaRecorder = new MediaRecorder(stream);
-                    
-                    mediaRecorder.ondataavailable = event => {
-                        if (event.data.size > 0) {
-                            audioChunks.push(event.data);
-                        }
-                    };
-
-                    mediaRecorder.onstop = async () => {
-                        console.log('🛑 Recording stopped');
-                        
-                        isRecording = false;
-                        recordButton.classList.remove('recording');
-                        recordButton.innerHTML = '🎙️';
-                        statusElement.textContent = 'Processing recording...';
-                        statusElement.className = "";
-
-                        if (nextButton) nextButton.disabled = true;
-                        if (finishButton) finishButton.disabled = true;
-
-                        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                        console.log('📦 Audio blob created:', audioBlob.size, 'bytes');
-
-                        const serverFilePath = await uploadAudio(audioBlob);
-
-                        if (serverFilePath) {
-                            answerUrlField.value = serverFilePath;
-                            
-                            if (nextButton) nextButton.disabled = false;
-                            if (finishButton) finishButton.disabled = false;
-                            
-                            statusElement.textContent = "✅ Recording saved! Ready to proceed.";
-                            statusElement.className = "";
-
-                            const audioUrl = URL.createObjectURL(audioBlob);
-                            audioPlayback.src = audioUrl;
-                            audioPlayback.style.display = 'block';
-                            
-                            console.log('✅ Ready to submit with file path:', serverFilePath);
-                        } else {
-                            statusElement.textContent = "❌ Upload failed. Please try recording again.";
-                            statusElement.className = "error";
-                        }
-                        
-                        audioChunks = [];
-                    };
-                    
-                    recordButton.disabled = false;
-                    statusElement.textContent = 'Click the microphone to start recording...';
-                    
-                })
-                .catch(error => {
-                    console.error('❌ Microphone error:', error);
-                    statusElement.textContent = '❌ Microphone access denied: ' + error.message;
-                    statusElement.className = "error";
-                    recordButton.disabled = true;
-                });
-        } else {
-            console.error('❌ MediaDevices API not supported');
-            statusElement.textContent = '❌ Your browser does not support audio recording.';
-            statusElement.className = "error";
-            recordButton.disabled = true;
-        }
-
-        /**
-         * ✅ Record button click handler
-         */
-        recordButton.addEventListener('click', () => {
-            if (!mediaRecorder) {
-                console.error('❌ MediaRecorder not initialized');
-                return;
-            }
-
-            if (isRecording) {
-                console.log('⏸️ Stopping recording...');
-                mediaRecorder.stop();
+        // --- Initialization ---
+        function init() {
+            if (IS_PART_2) {
+                updateTimerUI(PREP_TIME, 100);
+                statusText.textContent = "Click Play to start 1-min preparation";
+                btnIcon.className = "fas fa-play text-3xl pl-1";
+                statusBadge.textContent = "Ready for Prep";
             } else {
-                console.log('▶️ Starting recording...');
+                updateTimerUI(SPEAK_TIME_SHORT, 100);
+                statusText.textContent = "Click Microphone to start recording";
+                btnIcon.className = "fas fa-microphone text-3xl";
+                statusBadge.textContent = "Ready to Record";
+            }
+        }
+
+        // --- MODAL & SUBMIT LOGIC ---
+        if(finishButton) {
+            finishButton.addEventListener('click', (e) => {
+                e.preventDefault(); // Stop default submit
+
+                // Show the cute modal
+                gradingModal.classList.remove('hidden');
+
+                // Submit form after small delay to ensure modal renders
+                setTimeout(() => {
+                    questionForm.submit();
+                }, 500);
+            });
+        }
+
+        // --- Button Logic ---
+        actionButton.addEventListener('click', () => {
+            if (currentState === 'IDLE') {
+                if (IS_PART_2) {
+                    startPreparation();
+                } else {
+                    startRecording(SPEAK_TIME_SHORT);
+                }
+            }
+            else if (currentState === 'PREPARING') {
+                clearInterval(timerInterval);
+                startRecording(SPEAK_TIME_LONG);
+            }
+            else if (currentState === 'RECORDING') {
+                stopRecording();
+            }
+        });
+
+        function startPreparation() {
+            currentState = 'PREPARING';
+            statusBadge.textContent = "Preparation Time";
+            statusBadge.className = "bg-amber-100 text-amber-800 text-xs font-bold px-3 py-1 rounded-full uppercase";
+            actionButton.className = "group relative flex items-center justify-center w-24 h-24 rounded-full border-4 transition-all duration-300 prep-active focus:outline-none cursor-pointer";
+            btnIcon.className = "fas fa-forward text-3xl text-white";
+            statusText.textContent = "Take notes... (Click to skip)";
+            timerBar.className = "bg-amber-500 h-2 rounded-full";
+
+            let timeLeft = PREP_TIME;
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerUI(timeLeft, (timeLeft / PREP_TIME) * 100);
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    startRecording(SPEAK_TIME_LONG);
+                }
+            }, 1000);
+        }
+
+        async function startRecording(duration) {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
                 audioChunks = [];
+                mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+                mediaRecorder.onstop = handleRecordingStop;
                 mediaRecorder.start();
-                isRecording = true;
-                recordButton.classList.add('recording');
-                recordButton.innerHTML = '⏹️';
-                audioPlayback.style.display = 'none';
-                statusElement.textContent = '🔴 Recording... Speak now! Click again to stop.';
-                statusElement.className = "recording";
+                currentState = 'RECORDING';
 
-                if (nextButton) nextButton.disabled = true;
-                if (finishButton) finishButton.disabled = true;
-            }
-        });
+                statusBadge.textContent = "Recording";
+                statusBadge.className = "bg-red-100 text-red-700 text-xs font-bold px-3 py-1 rounded-full uppercase";
+                actionButton.className = "group relative flex items-center justify-center w-24 h-24 rounded-full border-4 transition-all duration-300 recording-active focus:outline-none cursor-pointer";
+                btnIcon.className = "fas fa-stop text-3xl text-white";
+                statusText.textContent = "Recording... Speak now!";
+                timerBar.className = "bg-red-600 h-2 rounded-full";
 
-        /**
-         * ✅ Form submission validation
-         */
-        document.getElementById('nextQuestionForm').addEventListener('submit', (e) => {
-            if (!answerUrlField.value) {
-                e.preventDefault();
-                alert('Please record your answer before proceeding!');
-                return false;
+                let timeLeft = duration;
+                updateTimerUI(timeLeft, 100);
+
+                timerInterval = setInterval(() => {
+                    timeLeft--;
+                    updateTimerUI(timeLeft, (timeLeft / duration) * 100);
+                    if (timeLeft <= 0) stopRecording();
+                }, 1000);
+
+            } catch (err) {
+                alert("Microphone access is required.");
+                currentState = 'IDLE';
             }
-            
-            console.log('📤 Submitting with file path:', answerUrlField.value);
-            return true;
-        });
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
+            clearInterval(timerInterval);
+        }
+
+        async function handleRecordingStop() {
+            currentState = 'FINISHED';
+            actionButton.className = "group flex items-center justify-center w-24 h-24 bg-gray-100 border-4 border-gray-200 rounded-full text-gray-400 cursor-not-allowed";
+            actionButton.disabled = true;
+            btnIcon.className = "fas fa-check text-3xl";
+            statusText.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+            statusBadge.textContent = "Saving";
+            timerBar.className = "bg-green-500 h-2 rounded-full";
+            timerBar.style.width = "100%";
+
+            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            audioPlayback.src = URL.createObjectURL(audioBlob);
+            audioPlayback.classList.remove('hidden');
+
+            const formData = new FormData();
+            formData.append("audioFile", audioBlob, "speaking_answer.webm");
+
+            try {
+                const response = await fetch('/api/upload-audio', { method: 'POST', body: formData });
+                if (response.ok) {
+                    const result = await response.json();
+                    answerUrlField.value = result.fileUrl;
+                    statusText.innerHTML = '<span class="text-green-600 font-bold">Saved! Ready for next.</span>';
+                    statusBadge.className = "bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full uppercase";
+                    statusBadge.textContent = "Done";
+
+                    if (nextButton) {
+                        nextButton.disabled = false;
+                        nextButton.classList.remove('hidden');
+                    }
+                    if (finishButton) {
+                        finishButton.disabled = false;
+                        finishButton.classList.remove('hidden');
+                    }
+                }
+            } catch (error) {
+                statusText.textContent = "Upload failed.";
+                statusText.classList.add("text-red-600");
+            }
+        }
+
+        function updateTimerUI(seconds, percentage) {
+            const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const s = (seconds % 60).toString().padStart(2, '0');
+            timerText.textContent = `${m}:${s}`;
+            timerBar.style.width = `${percentage}%`;
+            if (seconds < 10 && currentState === 'RECORDING') timerText.classList.add('text-red-600');
+            else timerText.classList.remove('text-red-600');
+        }
+
+        init();
     </script>
+</main>
+
+<footer th:replace="~{fragments/footer :: footer}"></footer>
 </body>
 </html>
