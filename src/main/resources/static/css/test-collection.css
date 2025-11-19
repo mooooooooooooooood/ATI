@@ -329,4 +329,17 @@
         height: 35px;
         font-size: 14px;
     }
+    a.btn-do-test {
+        background-color: #dc2626;
+        color: white;
+        border: none;
+        padding: 12px 20px;
+        border-radius: 8px;
+        font-weight: 600;
+        text-decoration: none; /* Essential for <a> tags */
+        display: flex; /* Essential for visibility */
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+    }
 }

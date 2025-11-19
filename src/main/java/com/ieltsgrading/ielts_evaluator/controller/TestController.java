@@ -23,15 +23,15 @@ public class TestController {
     @GetMapping("/list")
     public String testList(Model model, HttpSession session) {
         User user = (User) session.getAttribute("loggedInUser");
-        
+
         // Check if user is logged in
         if (user == null) {
             return "redirect:/require-login?redirect=/test/list";
         }
-        
+
         model.addAttribute("pageTitle", "Available Tests");
         model.addAttribute("user", user);
-        
+
         return "test-list";
     }
 
@@ -42,35 +42,35 @@ public class TestController {
     @GetMapping("/writing")
     public String writingTests(Model model, HttpSession session) {
         User user = (User) session.getAttribute("loggedInUser");
-        
+
         if (user == null) {
             return "redirect:/require-login?redirect=/test/writing";
         }
-        
+
         model.addAttribute("pageTitle", "Writing Tests");
         model.addAttribute("user", user);
         model.addAttribute("testCount", 30);
-        
+
         return "writing-tests";
     }
 
     /**
      * Listening tests page
-     * @return listening-tests.html
+     * UPDATED: Now redirects to the dedicated ListeningTestController
      */
     @GetMapping("/listening")
     public String listeningTests(Model model, HttpSession session) {
         User user = (User) session.getAttribute("loggedInUser");
-        
+
+        // Point to the NEW controller we created
+        String redirectTarget = "/listening/tests";
+
         if (user == null) {
-            return "redirect:/require-login?redirect=/test/listening";
+            return "redirect:/require-login?redirect=" + redirectTarget;
         }
-        
-        model.addAttribute("pageTitle", "Listening Tests");
-        model.addAttribute("user", user);
-        model.addAttribute("testCount", 40);
-        
-        return "listening-tests";
+
+        // CRITICAL FIX: Redirect to the controller that actually loads the database data
+        return "redirect:" + redirectTarget;
     }
 
     /**
@@ -81,17 +81,15 @@ public class TestController {
     public String speakingTests(Model model, HttpSession session) {
         User user = (User) session.getAttribute("loggedInUser");
 
-        // This is the new, correct path handled by the dedicated controller
         String redirectTarget = "/speaking/tests";
 
         if (user == null) {
-            // Redirect unauthenticated user to log in, preserving the target path
             return "redirect:/require-login?redirect=" + redirectTarget;
         }
 
-        // REDIRECT: Sends the user to the dedicated SpeakingTestController path
         return "redirect:" + redirectTarget;
     }
+
     /**
      * Reading tests page
      * @return reading-tests.html
@@ -100,15 +98,12 @@ public class TestController {
     public String readingTests(Model model, HttpSession session) {
         User user = (User) session.getAttribute("loggedInUser");
 
-        // This is the new, correct path handled by the dedicated controller
         String redirectTarget = "/reading/tests";
 
         if (user == null) {
-            // Redirect unauthenticated user to log in, preserving the target path
             return "redirect:/require-login?redirect=" + redirectTarget;
         }
 
-        // FIX: Redirects the browser to the dedicated controller path /reading/tests
         return "redirect:" + redirectTarget;
     }
 }

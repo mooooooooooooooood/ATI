@@ -46,7 +46,11 @@ public class SecurityConfig {
                         // ⭐ CRITICAL FIX: Ignore CSRF for all async submission endpoints, including the new bulk review endpoint.
                         .ignoringRequestMatchers(
                                 "/reading/tests/get-explanation",
-                                "/reading/tests/get-test-review/**", // <-- ADDED FIX for the new bulk endpoint
+                                "/reading/tests/get-test-review/**", // <-- Existing Reading Fix
+                                // --- LISTENING ENDPOINTS ADDED ---
+                                "/listening/tests/submit",          // Form Submission (POST)
+                                "/listening/tests/get-test-review/**", // Gemini Review (POST/AJAX)
+                                // ---------------------------------
                                 "/api/upload-audio",
                                 "/speaking/next"
                         )
@@ -61,20 +65,29 @@ public class SecurityConfig {
                         .requestMatchers("/error", "/error/**").permitAll()
 
                         // Explicitly permit the new bulk review endpoint (POST method)
-                        .requestMatchers(HttpMethod.POST, "/reading/tests/get-test-review/**").permitAll() // <-- ADDED FIX
+                        .requestMatchers(HttpMethod.POST, "/reading/tests/get-test-review/**").permitAll() // <-- Existing Reading Fix
+                        // --- LISTENING POST METHOD ADDED ---
+                        .requestMatchers(HttpMethod.POST, "/listening/tests/get-test-review/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/listening/tests/submit").authenticated()
+                        // ------------------------------------
 
                         // Obsolete endpoint left for safety, but will be removed eventually
                         .requestMatchers(HttpMethod.POST, "/reading/tests/get-explanation").permitAll()
 
                         // Protected speaking test endpoints
                         .requestMatchers("/speaking/**").authenticated()
-                        .requestMatchers("/test/**").authenticated()
+                        .requestMatchers("/test/**").authenticated() // Generic entry point
 
                         // File Upload API
                         .requestMatchers(HttpMethod.POST, "/api/upload-audio").authenticated()
 
                         // Require login redirect
                         .requestMatchers("/require-login").permitAll()
+
+                        // --- PROTECTED LISTENING ENDPOINTS ADDED ---
+                        // Needs authentication for the listing page and detail pages
+                        .requestMatchers("/listening/tests", "/listening/tests/**").authenticated()
+                        // ---------------------------------------------
 
                         // Protected resources
                         .requestMatchers("/dashboard/**", "/profile/**").authenticated()

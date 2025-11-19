@@ -210,8 +210,8 @@ public class ReadingTestService {
         if (rawScore >= 8)  return 3.5;
         if (rawScore >= 6)  return 3.0;
         if (rawScore >= 4)  return 2.5;
-        if (rawScore >= 0)  return 2.5;
-        return 2.0;
+        if (rawScore > 0)  return 2.0;
+        return 1.0;
     }
 
     private String normalizeAnswer(String answer) {
