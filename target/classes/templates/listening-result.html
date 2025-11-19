@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Listening Results - <span th:text="${testName}"></span></title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" th:href="@{/css/footer.css}">
+    <link rel="stylesheet" th:href="@{/css/header.css}">
+    <link rel="stylesheet" th:href="@{/css/index.css}">
+    <link rel="stylesheet" th:href="@{/css/practice-page.css}">
+    <style>
+        :root {
+            --brand-red: #dc2626;
+            --brand-dark: #7f1d1d;
+        }
+        body {
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            background-color: #f3f4f6;
+        }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        @keyframes fade-in-up {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-up { animation: fade-in-up 0.6s ease-out forwards; }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen text-gray-800">
+
+<header th:replace="~{fragments/header :: header}"></header>
+
+<main class="flex-grow container mx-auto px-4 py-10 max-w-5xl">
+
+    <!-- SCORE SUMMARY CARD -->
+    <div class="bg-white rounded-2xl shadow-lg overflow-hidden border-t-8 border-red-600 mb-10 animate-up">
+        <div class="p-8 text-center">
+            <h2 class="text-gray-500 uppercase tracking-widest font-semibold text-sm mb-2">IELTS Listening Test Results</h2>
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-900 mb-8" th:text="${testName}">Test Title Placeholder</h1>
+
+            <div class="flex flex-col md:flex-row justify-center items-center gap-10 md:gap-16">
+
+                <!-- Raw Score Circle -->
+                <div class="relative w-32 h-32 flex items-center justify-center">
+                    <div class="absolute inset-0 rounded-full border-4 border-gray-100"></div>
+                    <div class="absolute inset-0 rounded-full border-4 border-red-600 border-t-transparent animate-spin" style="animation-duration: 3s;"></div>
+                    <div class="flex flex-col items-center z-10">
+                        <span class="text-4xl font-extrabold text-gray-900" th:text="${score}">0</span>
+                        <span class="text-gray-400 font-medium text-xs uppercase mt-1">Raw Score</span>
+                    </div>
+                </div>
+
+                <!-- Band Score Circle (Larger) -->
+                <div class="relative w-40 h-40 flex items-center justify-center transform scale-110">
+                    <div class="absolute inset-0 rounded-full border-4 border-gray-100 bg-red-50"></div>
+                    <div class="absolute inset-0 rounded-full border-4 border-red-600 border-l-transparent border-r-transparent animate-pulse"></div>
+                    <div class="flex flex-col items-center z-10">
+                        <span class="text-5xl font-black text-red-700" th:text="${bandScore}">0.0</span>
+                        <span class="text-red-800 font-bold text-sm uppercase mt-1 tracking-wide">Band Score</span>
+                    </div>
+                </div>
+
+                <!-- Text Summary & Back Button -->
+                <div class="text-left space-y-3 md:ml-4">
+                    <div class="text-lg">
+                        You correctly answered <span class="font-bold text-green-600" th:text="${score}">0</span> out of <span th:text="${totalQuestions}">40</span>.
+                    </div>
+                    <div class="text-sm text-gray-500 max-w-xs">
+                        Review your answers below to identify listening gaps (spelling, distractors, etc.) and improve your score.
+                    </div>
+                    <div class="pt-2">
+                        <a th:href="@{/listening/tests}" class="inline-flex items-center px-5 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg transition shadow-md text-sm font-medium">
+                            <i class="fas fa-arrow-left mr-2"></i> Back to Test List
+                        </a>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- AI REVIEW SECTION (Async Loading) -->
+    <div class="mb-10 animate-up" style="animation-delay: 0.1s;">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 bg-red-100 text-red-600 rounded-full flex items-center justify-center">
+                <i class="fas fa-robot text-xl"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-800">AI Performance Analysis</h2>
+        </div>
+
+        <input type="hidden" id="testId" th:value="${testId != null ? testId : 0}">
+        <input type="hidden" id="moduleType" value="listening">
+
+        <div id="loading-review-message" class="bg-white p-10 rounded-xl shadow-sm text-center border border-gray-100">
+            <i class="fas fa-circle-notch fa-spin text-4xl text-red-500 mb-4"></i>
+            <p class="text-lg text-gray-600 font-medium">Generating comprehensive review...</p>
+            <p class="text-sm text-gray-400">Analyzing transcripts, distractors, and answer accuracy.</p>
+        </div>
+
+        <div id="comprehensive-review-container" class="grid grid-cols-1 md:grid-cols-2 gap-6 hidden">
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-500">
+                <h3 class="text-blue-600 font-bold uppercase text-xs tracking-wider mb-3 flex items-center gap-2">
+                    <i class="fas fa-chart-pie"></i> Overview Summary
+                </h3>
+                <p id="review-summary" class="text-gray-700 text-sm leading-relaxed">Loading...</p>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-yellow-500">
+                <h3 class="text-yellow-600 font-bold uppercase text-xs tracking-wider mb-3 flex items-center gap-2">
+                    <i class="fas fa-book"></i> Vocabulary & Spelling
+                </h3>
+                <p id="review-vocabulary" class="text-gray-700 text-sm leading-relaxed">Loading...</p>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-purple-500">
+                <h3 class="text-purple-600 font-bold uppercase text-xs tracking-wider mb-3 flex items-center gap-2">
+                    <i class="fas fa-tasks"></i> Question Types
+                </h3>
+                <p id="review-question-type" class="text-gray-700 text-sm leading-relaxed">Loading...</p>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-green-500">
+                <h3 class="text-green-600 font-bold uppercase text-xs tracking-wider mb-3 flex items-center gap-2">
+                    <i class="fas fa-lightbulb"></i> Strategic Advice
+                </h3>
+                <p id="review-strategy" class="text-gray-700 text-sm leading-relaxed">Loading...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- DETAILED ANSWER BREAKDOWN -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden animate-up" style="animation-delay: 0.2s;">
+        <div class="bg-gray-50 px-6 py-4 border-b border-gray-200">
+            <h2 class="text-xl font-bold text-gray-800">Detailed Answer Breakdown</h2>
+        </div>
+
+        <div class="divide-y divide-gray-100">
+            <div th:each="result : ${submissionResults}" class="p-6 hover:bg-gray-50 transition-colors">
+
+                <div class="flex items-start gap-4">
+
+                    <!-- Icon: Check or X -->
+                    <div class="flex-shrink-0 mt-1">
+                        <span th:if="${result.isIsCorrect()}" class="w-8 h-8 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
+                            <i class="fas fa-check"></i>
+                        </span>
+                        <span th:unless="${result.isIsCorrect()}" class="w-8 h-8 bg-red-100 text-red-600 rounded-full flex items-center justify-center">
+                            <i class="fas fa-times"></i>
+                        </span>
+                    </div>
+
+                    <div class="flex-grow">
+                        <!-- Question Number and Content -->
+                        <div class="mb-2">
+                            <span class="font-bold text-gray-900 mr-2" th:text="${result.questionOrder} + '.'">1.</span>
+
+                            <!-- LOGIC A: Show Question Text ONLY if there is NO group image -->
+                            <span th:if="${result.groupImageUrl == null}"
+                                  th:text="${result.questionText}"
+                                  class="text-gray-800">Question text</span>
+
+                            <!-- LOGIC B: Show The Image itself IF there IS a group image -->
+                            <div th:if="${result.groupImageUrl != null}" class="mt-2 mb-2">
+                                <img th:src="${result.groupImageUrl}"
+                                     alt="Question Context"
+                                     class="max-w-full h-auto rounded-lg border border-gray-200 shadow-sm"
+                                     style="max-height: 200px; object-fit: contain;">
+                            </div>
+
+                            <!-- Display Question Type Name -->
+                            <span class="ml-2 text-xs font-semibold text-gray-500 uppercase bg-gray-200 px-2 py-0.5 rounded"
+                                  th:if="${result.questionType != null}"
+                                  th:text="${result.questionType}">TYPE</span>
+                        </div>
+
+                        <!-- User Answer vs Correct Answer -->
+                        <div class="flex flex-wrap items-center gap-3 mt-3">
+                            <div class="flex items-center gap-2 px-3 py-1.5 rounded-md border"
+                                 th:classappend="${result.isIsCorrect()} ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'">
+                                <span class="text-xs font-bold uppercase tracking-wide">Your Answer:</span>
+                                <span class="font-bold"
+                                      th:text="${#strings.isEmpty(result.userResponse)} ? 'SKIPPED' : ${result.userResponse}">
+                                </span>
+                            </div>
+
+                            <div th:if="${!result.isIsCorrect()}" class="flex items-center gap-2 px-3 py-1.5 rounded-md bg-gray-100 border border-gray-200 text-gray-700">
+                                <span class="text-xs font-bold uppercase tracking-wide text-gray-500">Correct:</span>
+                                <span class="font-bold text-green-700" th:text="${result.correctAnswer}">Answer</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</main>
+
+<footer th:replace="~{fragments/footer :: footer}"></footer>
+<script type="text/javascript" th:src="@{/js/results-review-fetch.js}"></script>
+</body>
+</html>

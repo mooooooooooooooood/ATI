@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${pageTitle} ?: 'Speaking Test Collection'">Speaking Test Collection - EO.EO</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/test-collection.css}">
+    <link rel="stylesheet" th:href="@{/css/header.css}">
+    <link rel="stylesheet" th:href="@{/css/footer.css}">
+</head>
+<body>
+<header th:replace="~{fragments/header :: header}"></header>
+
+<main class="test-collection-page">
+    <div class="container">
+        <h1 class="page-title">Speaking test collection</h1>
+
+        <div class="content-wrapper">
+            <aside class="sidebar">
+                <div class="filter-section">
+                    <h3>Search</h3>
+                    <div class="search-box-sidebar">
+                        <input type="text" placeholder="Search by Topic" id="sidebarSearch"
+                               th:value="${searchQuery}">
+                        <button>🔍</button>
+                    </div>
+                </div>
+
+                <div class="filter-section">
+                    <h3>Sort</h3>
+                    <label class="radio-option">
+                        <input type="radio" name="sort" value="newest">
+                        <span>Newest</span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="sort" value="oldest">
+                        <span>Oldest</span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="sort" value="most-attempted">
+                        <span>Most attempted</span>
+                    </label>
+                </div>
+            </aside>
+
+            <section class="test-grid" id="speakingTestGrid">
+                <div class="test-card"
+                     th:each="test : ${testList}"
+                     th:attr="data-test-id=${test.testId}">
+
+                    <div class="test-thumbnail">
+                        <img th:src="@{/images/speaking.png}"
+                             alt="IELTS Speaking Test Thumbnail"
+                             onerror="this.src='/images/Logo.png'">
+                    </div>
+
+                    <h3 th:text="${test.testLabel}">Test 1 (Ngày 02.01)</h3>
+
+                    <p class="test-topics">
+                        <span style="font-weight: bold;">Topics:</span>
+                        <span th:text="${test.mainTopic}">Work/Parties|Place with trees</span>
+                    </p>
+
+                    <p class="test-date" style="color: #888;">Date: <span th:text="${test.testDate}">Ngày 02.01</span></p>
+
+                    <button class="btn-do-test"
+                            th:onclick="|window.location.href='/speaking/start/' + ${test.testId}|">
+                        <span class="icon">▶</span> Do the test
+                    </button>
+                </div>
+
+                <div th:if="${#lists.isEmpty(testList)}"
+                     style="grid-column: 1 / -1; text-align: center; padding: 60px 20px;">
+                    <h3 style="font-size: 24px; color: #666; margin-bottom: 10px;">
+                        🎤 No speaking tests available
+                    </h3>
+                    <p style="color: #999;">
+                        Please check back later or contact support
+                    </p>
+                </div>
+            </section>
+        </div>
+
+        <div class="test-stats"
+             style="text-align: center; margin-top: 20px; color: #666;">
+            <p>Total tests loaded: <span th:text="${testCount}">40</span></p>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{fragments/footer :: footer}"></footer>
+
+<script th:src="@{/js/header.js}" defer></script>
+<script th:src="@{/js/main.js}"></script>
+<script th:src="@{/js/speaking-test-collection.js}"></script>
+
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    window.serverData = {
+        totalTests: /*[[${testCount}]]*/ 0 // Using testCount
+    };
+
+    console.log('Server data loaded:', window.serverData);
+    /*]]>*/
+</script>
+</body>
+</html>

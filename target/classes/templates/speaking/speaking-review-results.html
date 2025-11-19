@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IELTS Speaking Results</title>
+
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        /* Custom overrides on top of Tailwind */
+        .page-container {
+            max-width: 1280px;
+            margin: auto;
+            background-color: #ffffff;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            /* Changed to Brand Red */
+            border-top: 8px solid #dc2626;
+        }
+
+        /* Part Header Styling */
+        .part-header-container {
+            /* Changed to Dark Red Gradient from screenshot footer */
+            background: linear-gradient(to right, #7f1d1d, #991b1b);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 0.5rem;
+            margin-top: 3rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .overall-score-display {
+            font-size: 4rem;
+            font-weight: 900;
+            /* Changed from Green to Brand Red */
+            color: #dc2626;
+            line-height: 1;
+        }
+
+        .criteria-grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+        @media (min-width: 1024px) {
+            .criteria-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .criteria-card {
+            background-color: #f9fafb;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            border: 1px solid #e5e7eb;
+            /* Default Border Red */
+            border-left: 5px solid #dc2626;
+            transition: transform 0.2s;
+        }
+        .criteria-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .assessment-text {
+            white-space: pre-wrap;
+            line-height: 1.6;
+            font-size: 0.95rem;
+            color: #4b5563;
+            background-color: white;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid #e5e7eb;
+            margin-top: 0.5rem;
+        }
+
+        .sub-header {
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #6b7280;
+            margin-top: 1rem;
+            margin-bottom: 0.25rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans">
+
+<div class="page-container mt-10 mb-10">
+
+    <header class="text-center pb-6 border-b border-gray-200">
+        <h1 class="text-4xl font-extrabold text-gray-900 tracking-tight">
+            AI IELTS Speaking Report 🎓
+        </h1>
+        <p class="text-lg text-red-700 mt-2">Comprehensive Test Analysis</p>
+    </header>
+
+    <div th:if="${finalOverallBand != null}">
+        <section class="text-center py-8 bg-red-50 rounded-xl mt-8 border border-red-100">
+            <h2 class="text-xl font-semibold text-gray-600 uppercase tracking-widest mb-2">Overall Test Band Score</h2>
+            <div class="overall-score-display" th:text="${#numbers.formatDecimal(finalOverallBand, 1, 1)}">7.0</div>
+            <p class="text-sm text-gray-500 mt-2">Average score across Part 1, Part 2, and Part 3</p>
+
+            <div class="mt-6">
+                <a th:href="@{/speaking/tests}" class="inline-block px-8 py-3 bg-red-600 text-white font-semibold rounded-lg shadow hover:bg-red-700 transition duration-200 ease-in-out">
+                    Start New Test
+                </a>
+            </div>
+        </section>
+
+        <div th:each="partEntry : ${allPartsResults}">
+
+            <div class="part-header-container">
+                <h2 class="text-2xl font-bold" th:text="${partEntry.key}">Part 1</h2>
+                <div class="flex items-center">
+                    <span class="text-sm text-gray-300 mr-2 uppercase font-semibold">Part Score</span>
+                    <span class="text-2xl font-bold text-red-600 bg-white px-3 py-1 rounded"
+                          th:text="${#numbers.formatDecimal(partEntry.value.get('overall'), 1, 1)}">6.5</span>
+                </div>
+            </div>
+
+            <div class="criteria-grid">
+
+                <section class="criteria-card" style="border-left-color: #dc2626;">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold text-gray-800">1. Fluency & Coherence</h3>
+                        <span class="text-2xl font-black text-red-600 bg-red-50 px-3 py-1 rounded-md border border-red-100"
+                              th:text="${#numbers.formatDecimal(partEntry.value.get('fluency').get('band'), 1, 1)}">7.0</span>
+                    </div>
+
+                    <h4 class="sub-header">Assessment</h4>
+                    <pre class="assessment-text" th:text="${partEntry.value.get('fluency').get('assessment')}"></pre>
+
+                    <h4 class="sub-header text-red-600">Detailed Evaluation</h4>
+                    <pre class="assessment-text" th:text="${partEntry.value.get('fluency').get('evaluation')}"></pre>
+                </section>
+
+                <section class="criteria-card" style="border-left-color: #dc2626;">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold text-gray-800">2. Lexical Resource</h3>
+                        <span class="text-2xl font-black text-red-600 bg-red-50 px-3 py-1 rounded-md border border-red-100"
+                              th:text="${#numbers.formatDecimal(partEntry.value.get('lexical').get('band'), 1, 1)}">6.0</span>
+                    </div>
+
+                    <h4 class="sub-header">Assessment</h4>
+                    <pre class="assessment-text" th:text="${partEntry.value.get('lexical').get('assessment')}"></pre>
+
+                    <h4 class="sub-header text-red-600">Suggestions</h4>
+                    <pre class="assessment-text bg-red-50 border-red-100" th:text="${partEntry.value.get('lexical').get('improvement_suggestions')}"></pre>
+                </section>
+
+                <section class="criteria-card" style="border-left-color: #dc2626;">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold text-gray-800">3. Grammatical Range</h3>
+                        <span class="text-2xl font-black text-red-600 bg-red-50 px-3 py-1 rounded-md border border-red-100"
+                              th:text="${#numbers.formatDecimal(partEntry.value.get('grammar').get('band'), 1, 1)}">6.5</span>
+                    </div>
+
+                    <h4 class="sub-header">Assessment</h4>
+                    <pre class="assessment-text" th:text="${partEntry.value.get('grammar').get('assessment')}"></pre>
+
+                    <h4 class="sub-header text-red-600">Suggestions</h4>
+                    <pre class="assessment-text bg-red-50 border-red-100" th:text="${partEntry.value.get('grammar').get('improvement_suggestions')}"></pre>
+                </section>
+
+                <section class="criteria-card" style="border-left-color: #dc2626;">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold text-gray-800">4. Pronunciation</h3>
+                        <span class="text-2xl font-black text-red-600 bg-red-50 px-3 py-1 rounded-md border border-red-100"
+                              th:text="${#numbers.formatDecimal(partEntry.value.get('pronunciation').get('band'), 1, 1)}">6.0</span>
+                    </div>
+
+                    <h4 class="sub-header">Assessment</h4>
+                    <pre class="assessment-text" th:text="${partEntry.value.get('pronunciation').get('assessment')}"></pre>
+
+                    <h4 class="sub-header text-red-600">Suggestions</h4>
+                    <pre class="assessment-text bg-red-50 border-red-100" th:text="${partEntry.value.get('pronunciation').get('improvement_suggestions')}"></pre>
+                </section>
+
+            </div> </div> </div> <div th:unless="${finalOverallBand != null}" class="bg-red-50 border border-red-200 rounded-lg p-6 text-center mt-8">
+    <h3 class="text-xl font-bold text-red-600">❌ Grading Results Unavailable</h3>
+    <p class="text-gray-600 mt-2">We encountered an error while processing your test results.</p>
+    <a th:href="@{/speaking/tests}" class="inline-block mt-4 text-red-600 font-medium hover:underline">Return to Tests List</a>
+</div>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${pageTitle} ?: 'Listening Test Collection'">Listening Test Collection - EO.EO</title>
+
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/test-collection.css}">
+    <link rel="stylesheet" th:href="@{/css/header.css}">
+    <link rel="stylesheet" th:href="@{/css/footer.css}">
+
+    <style>
+        .test-level {
+            text-align: center;
+            width: 100%;
+            margin: 10px 0;
+            font-weight: 600;
+        }
+        .test-level span {
+            display: inline-block;
+            padding: 4px 12px;
+            background-color: #f3f4f6;
+            color: #4b5563;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+        }
+       .test-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 1px solid #f0f0f0;
+
+    /* --- NEW LINES START --- */
+    position: relative; /* Establishes a stacking context */
+    z-index: 1;         /* Base layer */
+    overflow: visible;  /* Ensures nothing gets clipped */
+    /* --- NEW LINES END --- */
+}
+
+/* 2. Update the Button/Link Style */
+a.btn-do-test {
+    background-color: #dc2626;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-decoration: none;
+    transition: background 0.2s, transform 0.1s;
+    box-sizing: border-box;
+
+    /* --- NEW LINES START --- */
+    position: relative; /* Required for z-index to work */
+    z-index: 10;        /* Force it to sit ON TOP of the card */
+    margin-top: auto;   /* Pushes button to bottom if card stretches */
+    /* --- NEW LINES END --- */
+}
+
+a.btn-do-test:hover {
+    background-color: #b91c1c;
+    transform: translateY(-2px); /* Visual feedback on hover */
+}
+    </style>
+</head>
+<body>
+<header th:replace="~{fragments/header :: header}"></header>
+
+<main class="test-collection-page">
+    <div class="container">
+        <h1 class="page-title">Listening test collection</h1>
+
+        <div class="content-wrapper">
+            <aside class="sidebar">
+                <div class="filter-section">
+                    <h3>Search</h3>
+                    <div class="search-box-sidebar">
+                        <input type="text" placeholder="Search by test name..." id="sidebarSearch">
+                        <button id="searchButton">&#128269;</button>
+                    </div>
+                </div>
+                <div class="filter-section">
+                    <h3>Test Level</h3>
+                    <label class="checkbox-option">
+                        <input type="checkbox" name="level" value="Academic" id="levelAcademic">
+                        <span>Academic</span>
+                    </label>
+                    <label class="checkbox-option">
+                        <input type="checkbox" name="level" value="General" id="levelGeneral">
+                        <span>General Training</span>
+                    </label>
+                </div>
+                <div class="filter-section">
+                    <button class="btn-clear-filters" id="clearFiltersBtn">Clear Filters</button>
+                </div>
+            </aside>
+
+            <section class="test-grid" id="listeningTestGrid">
+                <div class="test-card"
+                     th:each="test : ${tests}"
+                     th:attr="data-test-id=${test.testId},
+                              data-test-level=${test.testLevel},
+                              data-test-name=${test.testName}">
+
+                    <div class="test-thumbnail">
+                        <img th:src="@{/images/listening.png}"
+                             th:alt="${test.testName}"
+                             onerror="this.src='/images/Logo.png'">
+                    </div>
+                    <h3 th:text="${test.testName}">Test Name</h3>
+
+                    <p class="test-level">
+                        <span th:text="${test.testLevel}">Academic</span>
+                    </p>
+
+                    <a class="btn-do-test"
+                       th:href="@{'/listening/tests/' + ${test.testId}}">
+                        <span class="icon">&#128214;</span> Do the test
+                    </a>
+                </div>
+
+                <div th:if="${#lists.isEmpty(tests)}"
+                     style="grid-column: 1 / -1; text-align: center; padding: 60px 20px;">
+                    <h3 style="font-size: 24px; color: #666; margin-bottom: 10px;">
+                        &#127911; No listening tests available
+                    </h3>
+                </div>
+            </section>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{fragments/footer :: footer}"></footer>
+<script th:src="@{/js/header.js}" defer></script>
+<script th:src="@{/js/main.js}"></script>
+<script th:src="@{/js/listening-test-collection.js}"></script>
+</body>
+</html>
