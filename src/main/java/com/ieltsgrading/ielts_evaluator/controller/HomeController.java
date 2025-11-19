@@ -228,18 +228,6 @@ public class HomeController {
     }
 
     /**
-     * ✅ Dedicated speaking result route (alternative access)
-     */
-    @GetMapping("/speaking/result/{submissionUuid}")
-    public String viewSpeakingResult(
-            @PathVariable String submissionUuid,
-            Model model,
-            HttpSession session) {
-        // Redirect to universal result route
-        return "redirect:/result/" + submissionUuid;
-    }
-
-    /**
      * Require login page
      */
     @GetMapping("/require-login")
