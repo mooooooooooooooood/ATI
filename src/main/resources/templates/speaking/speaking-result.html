@@ -25,6 +25,10 @@
             text-align: center;
         }
 
+        .result-header.processing {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
         .result-header h1 {
             font-size: 36px;
             margin-bottom: 15px;
@@ -129,43 +133,191 @@
             color: #38f9d7;
             border: 2px solid #38f9d7;
         }
+
+        /* ✅ Processing State */
+        .processing-container {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .spinner {
+            width: 80px;
+            height: 80px;
+            border: 8px solid rgba(102, 126, 234, 0.2);
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 30px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .processing-text {
+            font-size: 24px;
+            color: #667eea;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .processing-subtext {
+            font-size: 16px;
+            color: #666;
+        }
+
+        /* Feedback sections */
+        .feedback-item {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        .feedback-label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .feedback-content {
+            color: #666;
+            line-height: 1.6;
+        }
     </style>
 </head>
 <body>
     <header th:replace="~{fragments/header :: header}"></header>
 
     <main class="result-page">
-        <div class="result-header">
-            <div class="test-type-badge">🗣️ Speaking Test</div>
-            <h1 th:text="${submission.getTestDisplayName()}">CAM 20 - Speaking Test 1</h1>
-            
-            <div class="score-summary">
-                <div class="score-box">
-                    <div class="score-label">Fluency</div>
-                    <div class="score-number">7.0</div>
+        <!-- ✅ PROCESSING STATE -->
+        <div th:if="${submission.status == 'processing' or submission.status == 'pending'}">
+            <div class="result-header processing">
+                <div class="test-type-badge">🗣️ Speaking Test</div>
+                <h1 th:text="${submission.getTestDisplayName()}">Speaking Test</h1>
+            </div>
+
+            <div class="content-section">
+                <div class="processing-container">
+                    <div class="spinner"></div>
+                    <div class="processing-text">⏳ Grading in Progress...</div>
+                    <div class="processing-subtext">
+                        Your speaking test is being evaluated by AI.<br>
+                        This usually takes 1-2 minutes. Please wait...
+                    </div>
                 </div>
-                <div class="score-box">
-                    <div class="score-label">Pronunciation</div>
-                    <div class="score-number">7.5</div>
+            </div>
+
+            <div class="action-buttons">
+                <a href="/dashboard" class="btn btn-secondary">← Back to Dashboard</a>
+            </div>
+
+            <!-- Auto-refresh every 5 seconds -->
+            <script>
+                console.log('🔄 Test is being processed. Auto-refresh in 5 seconds...');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 5000);
+            </script>
+        </div>
+
+        <!-- ✅ COMPLETED STATE -->
+        <div th:if="${submission.status == 'completed'}">
+            <div class="result-header">
+                <div class="test-type-badge">🗣️ Speaking Test</div>
+                <h1 th:text="${submission.getTestDisplayName()}">Speaking Test</h1>
+                
+                <div class="score-summary">
+                    <!-- Individual scores if available -->
+                    <div class="score-box" th:if="${speakingDetail != null and speakingDetail.fluency != null}">
+                        <div class="score-label">Fluency & Coherence</div>
+                        <div class="score-number" th:text="${speakingDetail.fluency}">7.0</div>
+                    </div>
+                    <div class="score-box" th:if="${speakingDetail != null and speakingDetail.lexicalResource != null}">
+                        <div class="score-label">Lexical Resource</div>
+                        <div class="score-number" th:text="${speakingDetail.lexicalResource}">7.0</div>
+                    </div>
+                    <div class="score-box" th:if="${speakingDetail != null and speakingDetail.grammaticalRange != null}">
+                        <div class="score-label">Grammatical Range</div>
+                        <div class="score-number" th:text="${speakingDetail.grammaticalRange}">7.5</div>
+                    </div>
+                    <div class="score-box" th:if="${speakingDetail != null and speakingDetail.pronunciation != null}">
+                        <div class="score-label">Pronunciation</div>
+                        <div class="score-number" th:text="${speakingDetail.pronunciation}">7.5</div>
+                    </div>
+                    
+                    <!-- Overall score -->
+                    <div class="score-box overall">
+                        <div class="score-label">Overall Band Score</div>
+                        <div class="score-number" th:text="${submission.overallScore != null ? submission.overallScore : 'N/A'}">7.0</div>
+                    </div>
                 </div>
-                <div class="score-box overall">
-                    <div class="score-label">Overall Band Score</div>
-                    <div class="score-number" th:text="${submission.overallScore}">7.0</div>
+            </div>
+
+            <!-- Detailed Feedback -->
+            <div class="content-section" th:if="${speakingDetail != null}">
+                <h2 class="section-title">📋 Detailed Feedback</h2>
+                
+                <div class="feedback-item" th:if="${speakingDetail.feedback != null}">
+                    <div class="feedback-label">Overall Feedback:</div>
+                    <div class="feedback-content" th:text="${speakingDetail.feedback}">
+                        Your speaking performance shows good fluency and vocabulary range...
+                    </div>
                 </div>
+
+                <div class="feedback-item" th:if="${speakingDetail.strengths != null}">
+                    <div class="feedback-label">✅ Strengths:</div>
+                    <div class="feedback-content" th:text="${speakingDetail.strengths}">
+                        Good pronunciation and natural intonation...
+                    </div>
+                </div>
+
+                <div class="feedback-item" th:if="${speakingDetail.improvements != null}">
+                    <div class="feedback-label">💡 Areas for Improvement:</div>
+                    <div class="feedback-content" th:text="${speakingDetail.improvements}">
+                        Consider using more complex sentence structures...
+                    </div>
+                </div>
+            </div>
+
+            <!-- If no detailed feedback available -->
+            <div class="content-section" th:if="${speakingDetail == null}">
+                <h2 class="section-title">📋 Test Completed</h2>
+                <p style="text-align: center; font-size: 18px; color: #666; padding: 40px;">
+                    Your speaking test has been completed and scored.<br>
+                    Detailed feedback will be available soon.
+                </p>
+            </div>
+
+            <div class="action-buttons">
+                <a href="/dashboard" class="btn btn-secondary">← Back to Dashboard</a>
+                <a href="/speaking/tests" class="btn btn-primary">Take Another Test →</a>
             </div>
         </div>
 
-        <div class="content-section">
-            <h2 class="section-title">🗣️ Speaking Test - Coming Soon</h2>
-            <p style="text-align: center; font-size: 18px; color: #666; padding: 40px;">
-                Speaking test result page is under development.<br>
-                This feature will be available soon!
-            </p>
-        </div>
+        <!-- ✅ FAILED STATE -->
+        <div th:if="${submission.status == 'failed'}">
+            <div class="result-header" style="background: linear-gradient(135deg, #f44336 0%, #e91e63 100%);">
+                <div class="test-type-badge">🗣️ Speaking Test</div>
+                <h1 th:text="${submission.getTestDisplayName()}">Speaking Test</h1>
+            </div>
 
-        <div class="action-buttons">
-            <a href="/dashboard" class="btn btn-secondary">← Back to Dashboard</a>
-            <a href="/speaking/tests" class="btn btn-primary">Take Another Test →</a>
+            <div class="content-section">
+                <h2 class="section-title" style="color: #f44336;">❌ Grading Failed</h2>
+                <div style="text-align: center; padding: 40px;">
+                    <p style="font-size: 18px; color: #666; margin-bottom: 20px;">
+                        Unfortunately, there was an error grading your test.
+                    </p>
+                    <p style="font-size: 14px; color: #999;" th:if="${submission.errorMessage != null}">
+                        Error: <span th:text="${submission.errorMessage}">Unknown error</span>
+                    </p>
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <a href="/dashboard" class="btn btn-secondary">← Back to Dashboard</a>
+                <a href="/speaking/tests" class="btn btn-primary">Try Another Test →</a>
+            </div>
         </div>
     </main>
 

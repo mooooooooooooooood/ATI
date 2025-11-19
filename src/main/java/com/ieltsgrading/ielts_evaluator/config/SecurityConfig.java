@@ -18,94 +18,100 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    @Autowired
-    private CustomUserDetailsService userDetailsService;
+        @Autowired
+        private CustomUserDetailsService userDetailsService;
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+        @Bean
+        public PasswordEncoder passwordEncoder() {
+                return new BCryptPasswordEncoder();
+        }
 
-    @Bean
-    public DaoAuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-        authProvider.setUserDetailsService(userDetailsService);
-        authProvider.setPasswordEncoder(passwordEncoder());
-        return authProvider;
-    }
+        @Bean
+        public DaoAuthenticationProvider authenticationProvider() {
+                DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+                authProvider.setUserDetailsService(userDetailsService);
+                authProvider.setPasswordEncoder(passwordEncoder());
+                return authProvider;
+        }
 
-    @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
-        return authConfig.getAuthenticationManager();
-    }
+        @Bean
+        public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
+                return authConfig.getAuthenticationManager();
+        }
 
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-                .csrf(csrf -> csrf
-                        // ⭐ CRITICAL FIX: Ignore CSRF for all async submission endpoints, including the new bulk review endpoint.
-                        .ignoringRequestMatchers(
-                                "/reading/tests/get-explanation",
-                                "/reading/tests/get-test-review/**", // <-- ADDED FIX for the new bulk endpoint
-                                "/api/upload-audio",
-                                "/speaking/next"
-                        )
-                )
-                .authorizeHttpRequests(auth -> auth
-                        // Public resources
-                        .requestMatchers("/", "/home", "/index").permitAll()
-                        .requestMatchers("/user/login", "/user/signup", "/user/register").permitAll()
-                        .requestMatchers("/user/forgot-password", "/user/reset-password").permitAll()
-                        .requestMatchers("/user/verify-email").permitAll()
-                        .requestMatchers("/css/**", "/js/**", "/images/**", "/fonts/**").permitAll()
-                        .requestMatchers("/error", "/error/**").permitAll()
+        @Bean
+        public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+                http
+                                .csrf(csrf -> csrf
+                                                // ✅ CRITICAL FIX: Ignore CSRF for upload and async endpoints
+                                                .ignoringRequestMatchers(
+                                                                "/reading/tests/get-explanation",
+                                                                "/api/upload/**", // ← Audio upload
+                                                                "/api/submission/**" // ← Submission status check (nếu
+                                                                                     // cần)
+                                                ))
+                                .authorizeHttpRequests(auth -> auth
+                                                // Public resources
+                                                .requestMatchers("/", "/home", "/index").permitAll()
+                                                .requestMatchers("/user/login", "/user/signup", "/user/register")
+                                                .permitAll()
+                                                .requestMatchers("/user/forgot-password", "/user/reset-password")
+                                                .permitAll()
+                                                .requestMatchers("/user/verify-email").permitAll()
+                                                .requestMatchers("/css/**", "/js/**", "/images/**", "/fonts/**")
+                                                .permitAll()
+                                                .requestMatchers("/error").permitAll()
 
-                        // Explicitly permit the new bulk review endpoint (POST method)
-                        .requestMatchers(HttpMethod.POST, "/reading/tests/get-test-review/**").permitAll() // <-- ADDED FIX
+                                                // ✅ API endpoints - Permit upload and submission endpoints
+                                                .requestMatchers(HttpMethod.POST, "/reading/tests/get-explanation")
+                                                .permitAll()
+                                                .requestMatchers(HttpMethod.POST, "/api/upload/**").permitAll()
+                                                .requestMatchers(HttpMethod.GET, "/api/submission/*/status")
+                                                .authenticated()
 
-                        // Obsolete endpoint left for safety, but will be removed eventually
-                        .requestMatchers(HttpMethod.POST, "/reading/tests/get-explanation").permitAll()
+                                                // Require login redirect
+                                                .requestMatchers("/require-login").permitAll()
 
-                        // Protected speaking test endpoints
-                        .requestMatchers("/speaking/**").authenticated()
-                        .requestMatchers("/test/**").authenticated()
+                                                // ✅ Speaking routes - Require authentication
+                                                .requestMatchers("/speaking/**").authenticated()
 
-                        // File Upload API
-                        .requestMatchers(HttpMethod.POST, "/api/upload-audio").authenticated()
+                                                // ✅ Writing routes - Require authentication
+                                                .requestMatchers("/writing/**").authenticated()
 
-                        // Require login redirect
-                        .requestMatchers("/require-login").permitAll()
+                                                // ✅ Result pages - Require authentication
+                                                .requestMatchers("/result/**").authenticated()
 
-                        // Protected resources
-                        .requestMatchers("/dashboard/**", "/profile/**").authenticated()
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
+                                                // Protected resources
+                                                .requestMatchers("/dashboard/**", "/profile/**").authenticated()
+                                                .requestMatchers("/test/**").authenticated()
+                                                .requestMatchers("/admin/**").hasRole("ADMIN")
 
-                        // All other requests require authentication
-                        .anyRequest().authenticated())
-                .formLogin(form -> form
-                        .loginPage("/user/login")
-                        .loginProcessingUrl("/user/login")
-                        .defaultSuccessUrl("/", false)
-                        .failureUrl("/user/login?error=true")
-                        .usernameParameter("email")
-                        .passwordParameter("password")
-                        .permitAll())
-                .logout(logout -> logout
-                        .logoutUrl("/user/logout")
-                        .logoutSuccessUrl("/user/login?logout=true")
-                        .invalidateHttpSession(true)
-                        .deleteCookies("JSESSIONID")
-                        .permitAll())
-                .rememberMe(remember -> remember
-                        .key("uniqueAndSecret")
-                        .tokenValiditySeconds(86400) // 24 hours
-                        .userDetailsService(userDetailsService))
-                .exceptionHandling(exception -> exception
-                        .accessDeniedPage("/error/403"))
-                .sessionManagement(session -> session
-                        .maximumSessions(1)
-                        .expiredUrl("/user/login?expired=true"));
+                                                // All other requests require authentication
+                                                .anyRequest().authenticated())
+                                .formLogin(form -> form
+                                                .loginPage("/user/login")
+                                                .loginProcessingUrl("/user/login")
+                                                .defaultSuccessUrl("/", false)
+                                                .failureUrl("/user/login?error=true")
+                                                .usernameParameter("email")
+                                                .passwordParameter("password")
+                                                .permitAll())
+                                .logout(logout -> logout
+                                                .logoutUrl("/user/logout")
+                                                .logoutSuccessUrl("/user/login?logout=true")
+                                                .invalidateHttpSession(true)
+                                                .deleteCookies("JSESSIONID")
+                                                .permitAll())
+                                .rememberMe(remember -> remember
+                                                .key("uniqueAndSecret")
+                                                .tokenValiditySeconds(86400) // 24 hours
+                                                .userDetailsService(userDetailsService))
+                                .exceptionHandling(exception -> exception
+                                                .accessDeniedPage("/error/403"))
+                                .sessionManagement(session -> session
+                                                .maximumSessions(1)
+                                                .expiredUrl("/user/login?expired=true"));
 
-        return http.build();
-    }
+                return http.build();
+        }
 }

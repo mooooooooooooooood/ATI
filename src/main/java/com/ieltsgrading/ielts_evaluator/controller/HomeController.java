@@ -1,6 +1,8 @@
 package com.ieltsgrading.ielts_evaluator.controller;
 
 import com.ieltsgrading.ielts_evaluator.model.*;
+import com.ieltsgrading.ielts_evaluator.model.speaking.SpeakingSubmissionDetail;
+import com.ieltsgrading.ielts_evaluator.repository.speaking.SpeakingSubmissionDetailRepository;
 import com.ieltsgrading.ielts_evaluator.service.TestSubmissionService;
 import com.ieltsgrading.ielts_evaluator.service.UserService;
 import jakarta.servlet.http.HttpSession;
@@ -19,15 +21,19 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
 /**
- * Home Controller - UPDATED with new submission service
+ * ✅ UPDATED: Home Controller with Speaking Submission Detail Support
  */
 @Controller
 public class HomeController {
+    
     @Autowired
     private TestSubmissionService submissionService;
 
     @Autowired
     private UserService userService;
+    
+    @Autowired
+    private SpeakingSubmissionDetailRepository speakingDetailRepo;
 
     /**
      * Homepage
@@ -74,12 +80,10 @@ public class HomeController {
     }
 
     /**
-     * ✅ UPDATED: Dashboard page - Display user's test submissions
-     * Now uses TestSubmissionService which handles both writing & speaking
+     * Dashboard page - Display user's test submissions
      */
     @GetMapping("/dashboard")
     public String dashboard(Model model, HttpSession session) {
-        // Check Spring Security
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated() || auth.getName().equals("anonymousUser")) {
             System.out.println("🚫 Unauthorized access to dashboard");
@@ -87,17 +91,12 @@ public class HomeController {
         }
 
         try {
-            // Get user from database
             String email = auth.getName();
             User user = userService.getUserByEmail(email);
-
-            // Sync session
             session.setAttribute("loggedInUser", user);
 
-            // ✅ NEW: Get submissions using unified service
             List<ITestSubmission> allSubmissions = submissionService.getUserSubmissions(user);
             
-            // Separate into processing and completed
             List<ITestSubmission> processingSubmissions = new ArrayList<>();
             List<ITestSubmission> completedSubmissions = new ArrayList<>();
 
@@ -109,7 +108,6 @@ public class HomeController {
                 }
             }
 
-            // ✅ NEW: Get statistics using unified service
             Map<String, Object> stats = submissionService.getUserStats(user);
 
             model.addAttribute("pageTitle", "Dashboard - IELTS Test With AI");
@@ -134,8 +132,7 @@ public class HomeController {
     }
 
     /**
-     * ✅ UPDATED: View test result detail
-     * Now handles both writing and speaking submissions
+     * ✅ UPDATED: View test result detail - Universal route for all test types
      */
     @GetMapping("/result/{submissionUuid}")
     public String viewResult(
@@ -151,7 +148,6 @@ public class HomeController {
         try {
             User user = userService.getUserByEmail(auth.getName());
             
-            // ✅ NEW: Get submission using unified service
             Optional<ITestSubmission> optSubmission = submissionService.getSubmission(submissionUuid);
 
             if (optSubmission.isEmpty()) {
@@ -172,9 +168,8 @@ public class HomeController {
             model.addAttribute("isLoggedIn", true);
             model.addAttribute("submission", submission);
 
-            // ✅ NEW: Route to appropriate result page based on test type
+            // Route to appropriate result page based on test type
             if ("writing".equals(submission.getTestType())) {
-                // Parse detailed results if completed
                 if (submission.isCompleted()) {
                     WritingSubmission ws = (WritingSubmission) submission;
                     if (ws.getTask1Result() != null) {
@@ -191,7 +186,33 @@ public class HomeController {
                 return "writing-result";
                 
             } else if ("speaking".equals(submission.getTestType())) {
-                return "speaking-result";
+                // ✅ Load speaking submission detail from database
+                if (submission.isCompleted()) {
+                    SpeakingSubmission ss = (SpeakingSubmission) submission;
+                    
+                    // Try to get from SpeakingSubmissionDetail table first
+                    Optional<SpeakingSubmissionDetail> detailOpt = speakingDetailRepo
+                            .findBySubmission_SubmissionId(ss.getSubmissionId());
+                    
+                    if (detailOpt.isPresent()) {
+                        // ✅ Use structured data from detail table
+                        SpeakingSubmissionDetail detail = detailOpt.get();
+                        model.addAttribute("speakingDetail", detail);
+                        
+                        System.out.println("✅ Loaded speaking detail from database");
+                        System.out.println("   Fluency: " + detail.getFluency());
+                        System.out.println("   Lexical: " + detail.getLexicalResource());
+                        
+                    } else if (ss.getSpeakingResult() != null) {
+                        // ✅ Fallback: Parse from JSON (for old submissions)
+                        Map<String, Object> speakingDetail = submissionService
+                                .parseDetailedResult(ss.getSpeakingResult());
+                        model.addAttribute("speakingDetail", speakingDetail);
+                        
+                        System.out.println("⚠️ Using JSON fallback for speaking detail");
+                    }
+                }
+                return "speaking/speaking-result";
                 
             } else {
                 model.addAttribute("error", "Unknown test type: " + submission.getTestType());
@@ -204,6 +225,18 @@ public class HomeController {
             model.addAttribute("error", "Error loading result");
             return "error";
         }
+    }
+
+    /**
+     * ✅ Dedicated speaking result route (alternative access)
+     */
+    @GetMapping("/speaking/result/{submissionUuid}")
+    public String viewSpeakingResult(
+            @PathVariable String submissionUuid,
+            Model model,
+            HttpSession session) {
+        // Redirect to universal result route
+        return "redirect:/result/" + submissionUuid;
     }
 
     /**
