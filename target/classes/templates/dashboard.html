@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${pageTitle}">Dashboard - EO.EO</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/dashboard.css}">
+    <link rel="stylesheet" th:href="@{/css/header.css}">
+    <link rel="stylesheet" th:href="@{/css/footer.css}">
+</head>
+<body>
+    <!-- Header -->
+    <header th:replace="~{fragments/header :: header}"></header>
+
+    <!-- Main Content -->
+    <main class="dashboard-page">
+        <div class="container">
+            <h1 class="page-title">My Dashboard</h1>
+            
+            <!-- Statistics Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">📝</div>
+                    <div class="stat-info">
+                        <div class="stat-label">Total Tests</div>
+                        <div class="stat-value" th:text="${stats.totalTests}">0</div>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon">✅</div>
+                    <div class="stat-info">
+                        <div class="stat-label">Completed</div>
+                        <div class="stat-value" th:text="${stats.completedTests}">0</div>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon">⏳</div>
+                    <div class="stat-info">
+                        <div class="stat-label">Processing</div>
+                        <div class="stat-value" th:text="${stats.processingTests}">0</div>
+                    </div>
+                </div>
+                
+                <div class="stat-card highlight">
+                    <div class="stat-icon">⭐</div>
+                    <div class="stat-info">
+                        <div class="stat-label">Average Score</div>
+                        <div class="stat-value" th:text="${stats.averageScore}">0.0</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Processing Tests Section -->
+            <section class="submissions-section" th:if="${!#lists.isEmpty(processingSubmissions)}">
+                <h2 class="section-title">
+                    <span class="status-indicator processing"></span>
+                    Tests Being Graded
+                </h2>
+                <div class="submissions-grid">
+                    <div class="submission-card processing" 
+                         th:each="submission : ${processingSubmissions}">
+                        <div class="submission-header">
+                            <h3 th:text="${submission.getTestDisplayName()}">CAM 20 - Test 1</h3>
+                            <span class="status-badge processing" 
+                                  th:text="${submission.getStatusDisplay()}"
+                                  th:style="'background-color: ' + ${submission.getStatusColor()}">
+                                Đang chấm
+                            </span>
+                        </div>
+                        <div class="submission-info">
+                            <div class="info-item">
+                                <span class="icon">📅</span>
+                                <span th:text="${#temporals.format(submission.submittedAt, 'dd/MM/yyyy HH:mm')}">
+                                    05/11/2024 14:30
+                                </span>
+                            </div>
+                            <div class="info-item" th:if="${submission.getTestType() == 'writing'}">
+                                <span class="icon">📝</span>
+                                <span>
+                                    Task 1: <span th:text="${submission.task1WordCount}">150</span> words | 
+                                    Task 2: <span th:text="${submission.task2WordCount}">250</span> words
+                                </span>
+                            </div>
+                            <div class="info-item" th:if="${submission.getTestType() == 'speaking'}">
+                                <span class="icon">🎤</span>
+                                <span>Speaking Test</span>
+                            </div>
+                        </div>
+                        <div class="loading-indicator">
+                            <div class="spinner-small"></div>
+                            <span>Grading in progress...</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Completed Tests Section -->
+            <section class="submissions-section">
+                <h2 class="section-title">
+                    <span class="status-indicator completed"></span>
+                    Completed Tests
+                </h2>
+                
+                <div th:if="${#lists.isEmpty(completedSubmissions)}" class="empty-state">
+                    <div class="empty-icon">📚</div>
+                    <h3>No completed tests yet</h3>
+                    <p>Start taking tests to see your results here!</p>
+                </div>
+                
+                <div class="submissions-grid" th:if="${!#lists.isEmpty(completedSubmissions)}">
+                    <!-- ✅ FIX: Use data-uuid attribute instead of onclick with string -->
+                    <div class="submission-card completed" 
+                         th:each="submission : ${completedSubmissions}"
+                         th:data-uuid="${submission.submissionUuid}"
+                         th:data-type="${submission.testType}"
+                         onclick="viewResult(this.dataset.uuid, this.dataset.type)"
+                         style="cursor: pointer;">
+                        <div class="submission-header">
+                            <h3 th:text="${submission.getTestDisplayName()}">CAM 20 - Test 1</h3>
+                            <span class="status-badge completed">
+                                Completed
+                            </span>
+                        </div>
+                        
+                        <div class="submission-info">
+                            <div class="info-item">
+                                <span class="icon">📅</span>
+                                <span th:text="${#temporals.format(submission.submittedAt, 'dd/MM/yyyy HH:mm')}">
+                                    05/11/2024 14:30
+                                </span>
+                            </div>
+                            <div class="info-item">
+                                <span class="icon">⏱️</span>
+                                <span>
+                                    <span th:text="${submission.timeSpent != null ? submission.timeSpent / 60 : 0}">45</span> minutes
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <!-- Writing Scores -->
+                        <div class="score-display" th:if="${submission.getTestType() == 'writing'}">
+                            <div class="score-item">
+                                <div class="score-label">Task 1</div>
+                                <div class="score-value" th:text="'Band ' + ${submission.task1Score ?: '0.0'}">
+                                    Band 6.5
+                                </div>
+                            </div>
+                            <div class="score-item">
+                                <div class="score-label">Task 2</div>
+                                <div class="score-value" th:text="'Band ' + ${submission.task2Score ?: '0.0'}">
+                                    Band 7.0
+                                </div>
+                            </div>
+                            <div class="score-item overall">
+                                <div class="score-label">Overall</div>
+                                <div class="score-value highlight" 
+                                     th:text="'Band ' + ${submission.overallScore ?: '0.0'}">
+                                    Band 6.5
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Speaking Scores -->
+                        <div class="score-display" th:if="${submission.getTestType() == 'speaking'}">
+                            <div class="score-item overall">
+                                <div class="score-label">Speaking</div>
+                                <div class="score-value highlight" 
+                                     th:text="'Band ' + ${submission.overallScore ?: '0.0'}">
+                                    Band 7.0
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button class="btn-view-result">
+                            View Detailed Result →
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer th:replace="~{fragments/footer :: footer}"></footer>
+
+    <!-- Scripts -->
+    <script th:src="@{/js/header.js}" defer></script>
+    <script th:src="@{/js/main.js}"></script>
+    <script th:src="@{/js/dashboard.js}"></script>
+    
+    <script th:inline="javascript">
+    /*<![CDATA[*/
+    // ✅ Auto-refresh for processing submissions
+    const processingCount = /*[[${processingSubmissions.size()}]]*/ 0;
+    
+    console.log('📊 Dashboard loaded');
+    console.log('   Processing submissions:', processingCount);
+    
+    if (processingCount > 0) {
+        console.log('🔄 Found ' + processingCount + ' processing submissions');
+        console.log('⏰ Will auto-refresh every 10 seconds...');
+        
+        // ✅ Auto-refresh every 10 seconds while there are processing submissions
+        const refreshInterval = setInterval(() => {
+            console.log('🔄 Auto-refreshing dashboard to check status...');
+            window.location.reload();
+        }, 10000); // 10 seconds
+        
+        // Store interval ID in case we need to clear it
+        window.dashboardRefreshInterval = refreshInterval;
+    } else {
+        console.log('✅ No processing submissions - no auto-refresh needed');
+    }
+    
+    // ✅ View result function - supports both writing and speaking
+    function viewResult(submissionUuid, testType) {
+        console.log('👁️ Viewing result:', submissionUuid, 'Type:', testType);
+        
+        if (testType === 'writing') {
+            window.location.href = '/result/' + submissionUuid;
+        } else if (testType === 'speaking') {
+            window.location.href = '/speaking/result/' + submissionUuid;
+        } else {
+            // Fallback
+            window.location.href = '/result/' + submissionUuid;
+        }
+    }
+    
+    // ✅ Clean up interval when page is hidden (optional optimization)
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden && window.dashboardRefreshInterval) {
+            console.log('⏸️ Page hidden - pausing auto-refresh');
+            clearInterval(window.dashboardRefreshInterval);
+        } else if (!document.hidden && processingCount > 0) {
+            console.log('▶️ Page visible - resuming auto-refresh');
+            window.location.reload(); // Reload immediately when returning
+        }
+    });
+    
+    // ✅ Show notification if just submitted
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('submitted') === 'true') {
+        console.log('✅ Test submitted successfully!');
+        
+        // Optional: Show a toast notification
+        const toast = document.createElement('div');
+        toast.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            z-index: 10000;
+            animation: slideIn 0.5s ease;
+        `;
+        toast.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <div style="font-size: 32px;">✅</div>
+                <div>
+                    <div style="font-weight: 600; margin-bottom: 5px;">Test Submitted!</div>
+                    <div style="font-size: 14px; opacity: 0.9;">Your test is being graded...</div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(toast);
+        
+        // Remove toast after 5 seconds
+        setTimeout(() => {
+            toast.style.animation = 'slideOut 0.5s ease';
+            setTimeout(() => toast.remove(), 500);
+        }, 5000);
+        
+        // Clean URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
+    /*]]>*/
+</script>
+
+<style>
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateX(100%);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+    
+    @keyframes slideOut {
+        from {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        to {
+            opacity: 0;
+            transform: translateX(100%);
+        }
+    }
+</style>
+</body>
+</html>

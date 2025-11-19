@@ -173,10 +173,13 @@ public class TestSubmissionService {
         }
     }
 
-    /* ==================== ✅ SPEAKING SUBMISSION (FIXED) ==================== */
+    /*
+     * ==================== ✅ SPEAKING SUBMISSION (OPTIMIZED) ====================
+     */
 
     /**
-     * ✅ Create Speaking Submission - NOW STORES QUESTIONS
+     * ✅ OPTIMIZED: Create Speaking Submission
+     * Now stores data in separate TEXT column to avoid truncation
      */
     @Transactional
     public SpeakingSubmission createSpeakingSubmission(
@@ -191,13 +194,15 @@ public class TestSubmissionService {
         submission.setTestId(testId);
         submission.setStatus("pending");
 
-        // ✅ Store BOTH questions AND audio URLs as JSON
+        // ✅ CRITICAL FIX: Store metadata separately to keep audio_url short
+        // Just store a simple identifier in audio_url
+        submission.setAudioUrl("pending-" + UUID.randomUUID().toString().substring(0, 8));
+
+        // ✅ Store full data in speaking_result (which should be TEXT type)
         Map<String, Object> submissionData = new HashMap<>();
         submissionData.put("questions", questions);
         submissionData.put("audioUrls", audioUrls);
-        
-        String dataJson = convertToJson(submissionData);
-        submission.setAudioUrl(dataJson); // Reuse this field to store complete data
+        submission.setSpeakingResult(convertToJson(submissionData));
 
         SpeakingSubmission saved = speakingSubmissionRepo.save(submission);
 
@@ -216,8 +221,7 @@ public class TestSubmissionService {
     public void processSpeakingSubmissionAsync(String submissionUuid) {
         new Thread(() -> {
             try {
-                // Small delay to ensure transaction is committed
-                Thread.sleep(1000);
+                Thread.sleep(1000); // Small delay to ensure transaction is committed
                 processSpeakingSubmission(submissionUuid);
             } catch (Exception e) {
                 System.err.println("❌ Async processing error: " + e.getMessage());
@@ -227,8 +231,11 @@ public class TestSubmissionService {
     }
 
     /**
-     * ✅ Process Speaking Submission - COMPLETE REWRITE
+     * ✅ OPTIMIZED: Process Speaking Submission
+     * Now reads from speaking_result instead of audio_url
      */
+    // Replace the processSpeakingSubmission method with this fixed version:
+
     @Transactional
     public void processSpeakingSubmission(String submissionUuid) {
         try {
@@ -249,20 +256,25 @@ public class TestSubmissionService {
             System.out.println("   UUID: " + submissionUuid);
             System.out.println("========================================");
 
-            // ✅ Extract questions and audio FILE PATHS from stored JSON
-            String dataJson = submission.getAudioUrl();
+            // ✅ Extract questions and audio paths from speaking_result
+            String dataJson = submission.getSpeakingResult();
+
+            if (dataJson == null || dataJson.isEmpty()) {
+                throw new RuntimeException("No submission data found");
+            }
+
             @SuppressWarnings("unchecked")
             Map<String, Object> submissionData = objectMapper.readValue(dataJson, Map.class);
-            
+
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> questionsData = (List<Map<String, Object>>) submissionData.get("questions");
             @SuppressWarnings("unchecked")
             Map<String, String> audioFilePathsData = (Map<String, String>) submissionData.get("audioUrls");
-            
+
             // Convert to proper types
             List<QuestionQueueItemDTO> questions = new ArrayList<>();
             Map<Integer, String> audioFilePaths = new HashMap<>();
-            
+
             for (Map<String, Object> qData : questionsData) {
                 QuestionQueueItemDTO dto = new QuestionQueueItemDTO();
                 dto.setQuestionId((Integer) qData.get("questionId"));
@@ -270,12 +282,13 @@ public class TestSubmissionService {
                 dto.setQuestionText((String) qData.get("questionText"));
                 questions.add(dto);
             }
-            
+
             for (Map.Entry<String, String> entry : audioFilePathsData.entrySet()) {
                 audioFilePaths.put(Integer.parseInt(entry.getKey()), entry.getValue());
             }
 
-            System.out.println("📋 Reconstructed: " + questions.size() + " questions, " + audioFilePaths.size() + " audio files");
+            System.out.println(
+                    "📋 Reconstructed: " + questions.size() + " questions, " + audioFilePaths.size() + " audio files");
 
             // ✅ Call Speaking AI API
             System.out.println("📡 Calling Speaking AI API...");
@@ -287,21 +300,41 @@ public class TestSubmissionService {
                 throw new RuntimeException("API Error: " + apiResults.get("message"));
             }
 
-            // ✅ Extract scores
-            Double overallScore = extractOverallBand(apiResults);
-            
+            // ✅ FIX: Handle both String and Map responses from API
+            Map<String, Object> resultData;
+            if (apiResults.get("result") instanceof String) {
+                // API returned a JSON string, parse it
+                String resultJson = (String) apiResults.get("result");
+                resultData = objectMapper.readValue(resultJson, Map.class);
+            } else if (apiResults.get("result") instanceof Map) {
+                // API returned a Map directly
+                @SuppressWarnings("unchecked")
+                Map<String, Object> temp = (Map<String, Object>) apiResults.get("result");
+                resultData = temp;
+            } else {
+                // Use apiResults directly if no "result" key
+                resultData = apiResults;
+            }
+
+            // ✅ Extract scores from the correct structure
+            Double overallScore = extractOverallBand(resultData);
+
             // Extract individual scores if available
-            Double fluency = extractScore(apiResults, "fluency");
-            Double lexical = extractScore(apiResults, "lexical_resource");
-            Double grammar = extractScore(apiResults, "grammatical_range");
-            Double pronunciation = extractScore(apiResults, "pronunciation");
+            Double fluency = extractScore(resultData, "fluency");
+            Double lexical = extractScore(resultData, "lexical_resource");
+            Double grammar = extractScore(resultData, "grammatical_range");
+            Double pronunciation = extractScore(resultData, "pronunciation");
 
             // ✅ Apply IELTS rounding
             overallScore = IeltsScoreRounder.roundToIeltsBand(overallScore);
-            if (fluency != null) fluency = IeltsScoreRounder.roundToIeltsBand(fluency);
-            if (lexical != null) lexical = IeltsScoreRounder.roundToIeltsBand(lexical);
-            if (grammar != null) grammar = IeltsScoreRounder.roundToIeltsBand(grammar);
-            if (pronunciation != null) pronunciation = IeltsScoreRounder.roundToIeltsBand(pronunciation);
+            if (fluency != null)
+                fluency = IeltsScoreRounder.roundToIeltsBand(fluency);
+            if (lexical != null)
+                lexical = IeltsScoreRounder.roundToIeltsBand(lexical);
+            if (grammar != null)
+                grammar = IeltsScoreRounder.roundToIeltsBand(grammar);
+            if (pronunciation != null)
+                pronunciation = IeltsScoreRounder.roundToIeltsBand(pronunciation);
 
             System.out.println("\n--- SPEAKING SCORES (IELTS ROUNDED) ---");
             System.out.println("Overall Score: " + overallScore);
@@ -310,8 +343,11 @@ public class TestSubmissionService {
             System.out.println("Grammar: " + grammar);
             System.out.println("Pronunciation: " + pronunciation);
 
-            // ✅ Save main submission
-            submission.setSpeakingResult(convertToJson(apiResults));
+            // ✅ Update audio_url with summary
+            submission.setAudioUrl("completed-" + questions.size() + "-questions");
+
+            // ✅ Save full results
+            submission.setSpeakingResult(convertToJson(resultData));
             submission.setSpeakingScore(overallScore);
             submission.setOverallScore(overallScore);
             submission.setStatus("completed");
@@ -325,17 +361,17 @@ public class TestSubmissionService {
             detail.setLexicalResource(lexical);
             detail.setGrammaticalRange(grammar);
             detail.setPronunciation(pronunciation);
-            
+
             // Extract feedback texts
-            detail.setFeedback(extractString(apiResults, "feedback"));
-            detail.setStrengths(extractString(apiResults, "strengths"));
-            detail.setImprovements(extractString(apiResults, "improvements"));
-            
+            detail.setFeedback(extractString(resultData, "feedback"));
+            detail.setStrengths(extractString(resultData, "strengths"));
+            detail.setImprovements(extractString(resultData, "improvements"));
+
             // Store part-specific results
-            detail.setPart1Result(convertToJson(apiResults.get("part1_result")));
-            detail.setPart2Result(convertToJson(apiResults.get("part2_result")));
-            detail.setPart3Result(convertToJson(apiResults.get("part3_result")));
-            
+            detail.setPart1Result(convertToJson(resultData.get("part1_result")));
+            detail.setPart2Result(convertToJson(resultData.get("part2_result")));
+            detail.setPart3Result(convertToJson(resultData.get("part3_result")));
+
             speakingDetailRepo.save(detail);
 
             System.out.println("✅ SPEAKING SUBMISSION COMPLETED & SAVED");
@@ -365,7 +401,8 @@ public class TestSubmissionService {
     /* ==================== SHARED METHODS ==================== */
 
     private Double extractOverallBand(Map<String, Object> apiResponse) {
-        if (apiResponse == null) return null;
+        if (apiResponse == null)
+            return null;
 
         try {
             Object overallBand = apiResponse.get("overall_band");

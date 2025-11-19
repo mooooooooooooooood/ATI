@@ -113,7 +113,7 @@ public class ReadingTestController {
         }
         model.addAttribute("indexedQuestions", indexedQuestions);
 
-        return "test-details"; // Thymeleaf template name
+        return "read-test-details"; // Thymeleaf template name
     }
 
     @Transactional

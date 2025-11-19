@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" th:href="@{/css/footer.css}">
+    <link rel="stylesheet" th:href="@{/css/header.css}">
     <title th:text="${test.testName} + ' - Test Detail'"></title>
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -112,6 +114,6 @@
 
 <div class="h-24"></div>
 <footer th:replace="~{fragments/footer :: footer}"></footer>
-
+<script th:src="@{/js/header.js}" defer></script>
 </body>
 </html>

@@ -43,13 +43,13 @@ public class SecurityConfig {
         public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
                 http
                                 .csrf(csrf -> csrf
-                                                // ✅ CRITICAL FIX: Ignore CSRF for upload and async endpoints
+                                                // ⭐ CRITICAL FIX: Ignore CSRF for all async submission endpoints,
+                                                // including the new bulk review endpoint.
                                                 .ignoringRequestMatchers(
                                                                 "/reading/tests/get-explanation",
-                                                                "/api/upload/**", // ← Audio upload
-                                                                "/api/submission/**" // ← Submission status check (nếu
-                                                                                     // cần)
-                                                ))
+                                                                "/reading/tests/get-test-review/**",
+                                                                "/api/upload-audio",
+                                                                "/speaking/next"))
                                 .authorizeHttpRequests(auth -> auth
                                                 // Public resources
                                                 .requestMatchers("/", "/home", "/index").permitAll()
@@ -60,30 +60,38 @@ public class SecurityConfig {
                                                 .requestMatchers("/user/verify-email").permitAll()
                                                 .requestMatchers("/css/**", "/js/**", "/images/**", "/fonts/**")
                                                 .permitAll()
-                                                .requestMatchers("/error").permitAll()
+                                                .requestMatchers("/error", "/error/**").permitAll()
+                                                .requestMatchers("/uploads/audio/**").permitAll() // ✅ Cho phép access
+                                                                                                  // audio files
 
-                                                // ✅ API endpoints - Permit upload and submission endpoints
+                                                // ✅ THÊM: Cho phép truy cập speaking result
+                                                .requestMatchers("/speaking/result/**").authenticated()
+                                                .requestMatchers("/result/**").authenticated() // ✅ Universal result
+                                                                                               // route
+
+                                                // Protected speaking endpoints
+                                                .requestMatchers("/speaking/**").authenticated()
+
+                                                // Explicitly permit the new bulk review endpoint (POST method)
+                                                .requestMatchers(HttpMethod.POST, "/reading/tests/get-test-review/**")
+                                                .permitAll() // <-- ADDED FIX
+
+                                                // Obsolete endpoint left for safety, but will be removed eventually
                                                 .requestMatchers(HttpMethod.POST, "/reading/tests/get-explanation")
                                                 .permitAll()
-                                                .requestMatchers(HttpMethod.POST, "/api/upload/**").permitAll()
-                                                .requestMatchers(HttpMethod.GET, "/api/submission/*/status")
-                                                .authenticated()
+
+                                                // Protected speaking test endpoints
+                                                .requestMatchers("/speaking/**").authenticated()
+                                                .requestMatchers("/test/**").authenticated()
+
+                                                // File Upload API
+                                                .requestMatchers(HttpMethod.POST, "/api/upload-audio").authenticated()
 
                                                 // Require login redirect
                                                 .requestMatchers("/require-login").permitAll()
 
-                                                // ✅ Speaking routes - Require authentication
-                                                .requestMatchers("/speaking/**").authenticated()
-
-                                                // ✅ Writing routes - Require authentication
-                                                .requestMatchers("/writing/**").authenticated()
-
-                                                // ✅ Result pages - Require authentication
-                                                .requestMatchers("/result/**").authenticated()
-
                                                 // Protected resources
                                                 .requestMatchers("/dashboard/**", "/profile/**").authenticated()
-                                                .requestMatchers("/test/**").authenticated()
                                                 .requestMatchers("/admin/**").hasRole("ADMIN")
 
                                                 // All other requests require authentication

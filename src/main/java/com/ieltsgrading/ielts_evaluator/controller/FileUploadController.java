@@ -22,10 +22,11 @@ public class FileUploadController {
 
     /**
      * Handles POST requests from the client's JavaScript to upload the recorded audio blob.
-     * Saves the file locally and returns the absolute file path (as a URL).
-     * The path uses the 'file:///' protocol required by UrlResource.
-     * * @param file The audio file (MultipartFile) sent from the browser.
-     * @return A JSON object containing the fileUrl for the local path.
+     * Saves the file locally and returns a RELATIVE path (not absolute file:/// URL).
+     * This allows the backend to properly read and process the file later.
+     * 
+     * @param file The audio file (MultipartFile) sent from the browser.
+     * @return A JSON object containing the relative fileUrl.
      */
     @PostMapping("/api/upload-audio")
     public ResponseEntity<Map<String, String>> uploadAudio(@RequestParam("audioFile") MultipartFile file) {
@@ -53,17 +54,23 @@ public class FileUploadController {
             // 4. Save the file to the local directory
             Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
 
-            // 5. Construct the full absolute URL required by UrlResource (file:///...)
-            // This is the URL that will be passed back to the frontend and saved in the session.
-            String absolutePathUrl = filePath.toAbsolutePath().toUri().toString();
+            // 5. ✅ Return RELATIVE path instead of absolute file:/// URL
+            // This is much shorter and can be used by backend to locate the file
+            String relativePath = "temp-audio/" + filename;
 
-            System.out.println("File uploaded successfully to: " + absolutePathUrl);
+            System.out.println("File uploaded successfully to: " + filePath.toAbsolutePath());
+            System.out.println("Returning relative path: " + relativePath);
 
-            return ResponseEntity.ok(Map.of("fileUrl", absolutePathUrl));
+            // Return both for flexibility (you can use either in your code)
+            return ResponseEntity.ok(Map.of(
+                "fileUrl", relativePath,           // ✅ Use this (short, portable)
+                "fileName", filename                // Just the filename
+            ));
 
         } catch (IOException e) {
             System.err.println("File upload failed: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Server failed to save file."));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Server failed to save file."));
         }
     }
 }

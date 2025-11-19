@@ -18,7 +18,7 @@ import java.util.UUID;
  * ✅ Controller to handle audio file uploads from speaking practice
  */
 @RestController
-@RequestMapping("/api/upload")
+@RequestMapping("/api")
 public class AudioUploadController {
 
     // Upload directory - configurable via application.properties
@@ -35,7 +35,7 @@ public class AudioUploadController {
      */
     @PostMapping("/audio")
     public ResponseEntity<Map<String, Object>> uploadAudio(
-            @RequestParam("audio") MultipartFile file) {
+            @RequestParam("audioFile") MultipartFile file) {
         
         Map<String, Object> response = new HashMap<>();
         
