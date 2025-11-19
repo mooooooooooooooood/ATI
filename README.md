@@ -40,6 +40,9 @@ IDE	IntelliJ / VSCode / Eclipse
 ⚙️ 3. Cách cài đặt & cấu hình
 3.1. Clone project
 git clone https://github.com/mooooooooooooooood/ATI.git
+3.2 Import database
+MySQL WorkBench: Server => Data Import (Import from Disk) => Import from Self-Contained File => Change Path => Default target schema
+                  => Import Progress tab => Start import
 
 🔧 4. Cấu hình trong application.properties
 
