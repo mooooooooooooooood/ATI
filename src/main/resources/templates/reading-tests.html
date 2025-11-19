@@ -8,95 +8,107 @@
     <link rel="stylesheet" th:href="@{/css/test-collection.css}">
     <link rel="stylesheet" th:href="@{/css/header.css}">
     <link rel="stylesheet" th:href="@{/css/footer.css}">
+
+    <style>
+        .test-level {
+            text-align: center; /* This centers the text */
+            width: 100%;        /* Ensures the container spans the full width */
+            margin: 10px 0;     /* Adds a little vertical spacing */
+            font-weight: 600;   /* Optional: makes it look more like a label */
+        }
+
+        /* Optional: Style the span like a badge */
+        .test-level span {
+            display: inline-block;
+            padding: 4px 12px;
+            background-color: #f3f4f6;
+            color: #4b5563;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+        }
+    </style>
 </head>
 <body>
-    <!-- Header -->
-    <header th:replace="~{fragments/header :: header}"></header>
+<header th:replace="~{fragments/header :: header}"></header>
 
-    <!-- Main Content -->
-    <main class="test-collection-page">
-        <div class="container">
-            <h1 class="page-title">Reading test collection</h1>
-            
-            <div class="content-wrapper">
-                <!-- Sidebar -->
-                <aside class="sidebar">
-                    <div class="filter-section">
-                        <h3>Search</h3>
-                        <div class="search-box-sidebar">
-                            <input type="text" placeholder="Search by test name..." id="sidebarSearch">
-                            <button id="searchButton">&#128269;</button>
-                        </div>
-                    </div>
-                    
-                    <div class="filter-section">
-                        <h3>Test Level</h3>
-                        <label class="checkbox-option">
-                            <input type="checkbox" name="level" value="Academic" id="levelAcademic">
-                            <span>Academic</span>
-                        </label>
-                        <label class="checkbox-option">
-                            <input type="checkbox" name="level" value="General" id="levelGeneral">
-                            <span>General Training</span>
-                        </label>
-                    </div>
+<main class="test-collection-page">
+    <div class="container">
+        <h1 class="page-title">Reading test collection</h1>
 
-                    <div class="filter-section">
-                        <button class="btn-clear-filters" id="clearFiltersBtn">Clear Filters</button>
+        <div class="content-wrapper">
+            <aside class="sidebar">
+                <div class="filter-section">
+                    <h3>Search</h3>
+                    <div class="search-box-sidebar">
+                        <input type="text" placeholder="Search by test name..." id="sidebarSearch">
+                        <button id="searchButton">&#128269;</button>
                     </div>
-                </aside>
+                </div>
 
-                <!-- Test Grid -->
-                <section class="test-grid" id="readingTestGrid">
-                    <!-- Tests from backend -->
-                    <div class="test-card" 
-                         th:each="test : ${tests}"
-                         th:attr="data-test-id=${test.id},
+                <div class="filter-section">
+                    <h3>Test Level</h3>
+                    <label class="checkbox-option">
+                        <input type="checkbox" name="level" value="Academic" id="levelAcademic">
+                        <span>Academic</span>
+                    </label>
+                    <label class="checkbox-option">
+                        <input type="checkbox" name="level" value="General" id="levelGeneral">
+                        <span>General Training</span>
+                    </label>
+                </div>
+
+                <div class="filter-section">
+                    <button class="btn-clear-filters" id="clearFiltersBtn">Clear Filters</button>
+                </div>
+            </aside>
+
+            <section class="test-grid" id="readingTestGrid">
+                <div class="test-card"
+                     th:each="test : ${tests}"
+                     th:attr="data-test-id=${test.id},
                                   data-test-level=${test.testLevel.name()},
                                   data-test-name=${test.testName}">
-                        <div class="test-thumbnail">
-                            <img th:src="@{/images/reading.png}" 
-                                 th:alt="${test.testName}"
-                                 onerror="this.src='/images/Logo.png'">
-                        </div>
-                        <h3 th:text="${test.testName}">IELTS Reading Test 1</h3>
-                        <p class="test-level">
-                            <span th:if="${test.testLevel.name() == 'Academic'}">Academic</span>
-                            <span th:if="${test.testLevel.name() == 'General'}">General Training</span>
-                        </p>
-                        <button class="btn-do-test" 
-                                th:onclick="|window.location.href='/reading/tests/${test.id}'|">
-                            <span class="icon">&#128214;</span> Do the test
-                        </button>
+                    <div class="test-thumbnail">
+                        <img th:src="@{/images/reading.png}"
+                             th:alt="${test.testName}"
+                             onerror="this.src='/images/Logo.png'">
                     </div>
-                    
-                    <!-- Show message if no tests -->
-                    <div th:if="${#lists.isEmpty(tests)}" 
-                         style="grid-column: 1 / -1; text-align: center; padding: 60px 20px;">
-                        <h3 style="font-size: 24px; color: #666; margin-bottom: 10px;">
-                            &#128218; No reading tests available
-                        </h3>
-                        <p style="color: #999;">
-                            Please run the SQL insertion script or contact support
-                        </p>
-                    </div>
-                </section>
-            </div>
-            
-            <!-- Test Statistics -->
-            <div class="test-stats" th:if="${testCount > 0}" 
-                 style="text-align: center; margin-top: 20px; color: #666;">
-                <p>Total: <span th:text="${testCount}">0</span> reading tests available</p>
-            </div>
+                    <h3 th:text="${test.testName}">IELTS Reading Test 1</h3>
+
+                    <p class="test-level">
+                        <span th:if="${test.testLevel.name() == 'Academic'}">Academic</span>
+                        <span th:if="${test.testLevel.name() == 'General'}">General Training</span>
+                    </p>
+
+                    <button class="btn-do-test"
+                            th:onclick="|window.location.href='/reading/tests/${test.id}'|">
+                        <span class="icon">&#128214;</span> Do the test
+                    </button>
+                </div>
+
+                <div th:if="${#lists.isEmpty(tests)}"
+                     style="grid-column: 1 / -1; text-align: center; padding: 60px 20px;">
+                    <h3 style="font-size: 24px; color: #666; margin-bottom: 10px;">
+                        &#128218; No reading tests available
+                    </h3>
+                    <p style="color: #999;">
+                        Please run the SQL insertion script or contact support
+                    </p>
+                </div>
+            </section>
         </div>
-    </main>
 
-    <!-- Footer -->
-    <footer th:replace="~{fragments/footer :: footer}"></footer>
+        <div class="test-stats" th:if="${testCount > 0}"
+             style="text-align: center; margin-top: 20px; color: #666;">
+            <p>Total: <span th:text="${testCount}">0</span> reading tests available</p>
+        </div>
+    </div>
+</main>
 
-    <!-- Scripts -->
-    <script th:src="@{/js/header.js}" defer></script>
-    <script th:src="@{/js/main.js}"></script>
-    <script th:src="@{/js/reading-test-collection.js}"></script>
+<footer th:replace="~{fragments/footer :: footer}"></footer>
+
+<script th:src="@{/js/header.js}" defer></script>
+<script th:src="@{/js/main.js}"></script>
+<script th:src="@{/js/reading-test-collection.js}"></script>
 </body>
 </html>

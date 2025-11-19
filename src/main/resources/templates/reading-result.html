@@ -2,130 +2,180 @@
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>Results - <span th:text="${testName}"></span></title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Results - <span th:text="${testName}"></span></title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" th:href="@{/css/footer.css}">
+    <link rel="stylesheet" th:href="@{/css/header.css}">
+    <link rel="stylesheet" th:href="@{/css/index.css}">
+    <link rel="stylesheet" th:href="@{/css/practice-page.css}">
     <style>
-        body { font-family: Arial, sans-serif; padding: 40px; background-color: #f4f7f6; text-align: center; }
-        .result-box { max-width: 600px; margin: 50px auto; background-color: #ffffff; padding: 40px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); text-align: center; }
-        h1 { color: #007bff; margin-bottom: 20px; }
-        .score-display { font-size: 3.5em; color: #28a745; font-weight: bold; margin: 20px 0; }
-        .action-link { display: inline-block; margin-top: 30px; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; }
+        :root {
+            --brand-red: #dc2626;
+            --brand-dark: #7f1d1d;
+        }
+        body {
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            background-color: #f3f4f6;
+        }
 
-        /* --- Styles for Detailed Breakdown --- */
-        .details-container { max-width: 800px; margin: 40px auto; padding: 20px; background-color: #ffffff; border-radius: 10px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); text-align: left; }
-        .detail-row { padding: 15px 0; border-bottom: 1px solid #eee; }
-        .detail-row:last-child { border-bottom: none; }
-        .question-title { font-weight: bold; color: #333; margin-bottom: 5px; }
-        .user-answer { font-weight: bold; padding: 2px 5px; border-radius: 3px; }
-        .correct { color: #155724; background-color: #d4edda; }
-        .incorrect { color: #721c24; background-color: #f8d7da; }
-        .correct-display { color: #28a745; font-weight: bold; }
+        /* Custom Scrollbar for aesthetics */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-        /* --- Styles for Comprehensive Review Cards --- */
-        .review-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; margin-top: 20px; }
-        .review-card { background-color: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6; text-align: left; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .review-card h3 { color: #007bff; margin-top: 0; font-size: 1.1em; border-bottom: 2px solid #007bff; padding-bottom: 5px; }
-        .loading-review-message { padding: 20px; font-size: 1.1em; color: #6c757d; }
+        /* Animations */
+        @keyframes fade-in-up {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-up { animation: fade-in-up 0.6s ease-out forwards; }
     </style>
 </head>
-<body>
+<body class="flex flex-col min-h-screen text-gray-800">
 
-<div class="result-box">
-    <h1>IELTS Reading Test Results</h1>
-    <h2 th:text="${testName}">Test Title Placeholder</h2>
+<header th:replace="~{fragments/header :: header}"></header>
 
-    <p class="info-text">Your Score:</p>
+<main class="flex-grow container mx-auto px-4 py-10 max-w-5xl">
 
-    <div class="score-display">
-        <span class="correct-answers" th:text="${score}">0</span> / <span class="total-questions" th:text="${totalQuestions}">40</span>
-    </div>
+    <div class="bg-white rounded-2xl shadow-lg overflow-hidden border-t-8 border-red-600 mb-10 animate-up">
+        <div class="p-8 text-center">
+            <h2 class="text-gray-500 uppercase tracking-widest font-semibold text-sm mb-2">IELTS Reading Test Results</h2>
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-900 mb-8" th:text="${testName}">Test Title Placeholder</h1>
 
-    <p class="info-text">
-        You correctly answered **<span th:text="${score}">0</span>** questions out of **<span th:text="${totalQuestions}">40</span>**.
-    </p>
+            <div class="flex flex-col md:flex-row justify-center items-center gap-8 md:gap-16">
 
-    <a th:href="@{/reading/tests}" class="action-link">Back to Tests List</a>
-</div>
+                <div class="relative w-40 h-40 flex items-center justify-center">
+                    <div class="absolute inset-0 rounded-full border-4 border-gray-100"></div>
+                    <div class="absolute inset-0 rounded-full border-4 border-red-600 border-t-transparent animate-spin" style="animation-duration: 3s;"></div>
 
-<hr style="border-top: 1px dashed #ccc; margin: 30px auto; width: 600px;"/>
-
-
-<div class="details-container">
-    <h2>🧠 Comprehensive AI Performance Review</h2>
-
-    <input type="hidden" id="testId" th:value="${testId}">
-
-    <div id="loading-review-message" class="loading-review-message">
-        Generating comprehensive, categorized performance review... Please wait.
-    </div>
-
-    <div id="comprehensive-review-container" class="review-grid" style="display: none;">
-
-        <div class="review-card">
-            <h3>Overview Summary</h3>
-            <p id="review-summary">Loading...</p>
-        </div>
-
-        <div class="review-card">
-            <h3>Vocabulary Weaknesses</h3>
-            <p id="review-vocabulary">Loading...</p>
-        </div>
-
-        <div class="review-card">
-            <h3>Question Type Insights</h3>
-            <p id="review-question-type">Loading...</p>
-        </div>
-
-        <div class="review-card">
-            <h3>Strategy Recommendations</h3>
-            <p id="review-strategy">Loading...</p>
-        </div>
-    </div>
-</div>
-
-<hr style="border-top: 1px dashed #ccc; margin: 30px auto; width: 600px;"/>
-
-
-<div class="details-container">
-    <h2>Answer Review</h2>
-
-    <div th:each="result : ${submissionResults}" class="detail-row">
-
-        <th:block th:with="questionTypeId = ${result.questionTypeId}, isSummaryCompletion = ${questionTypeId == 8}">
-
-            <th:block th:if="${isSummaryCompletion}">
-                <div class="question-title">
-                    <span th:text="${result.questionOrder} + '. ' + ${result.questionText}">Question text placeholder</span>
+                    <div class="flex flex-col items-center">
+                        <span class="text-5xl font-extrabold text-gray-900" th:text="${score}">0</span>
+                        <span class="text-gray-400 font-medium text-sm uppercase mt-1">out of <span th:text="${totalQuestions}">40</span></span>
+                    </div>
                 </div>
-                <p>
-                    Your Answer (Raw):
-                    <span th:text="${result.userResponse}"></span>
-                    (Correct: <span th:text="${result.correctAnswer}"></span>)
-                </p>
-            </th:block>
 
-            <th:block th:if="${!isSummaryCompletion}">
-                <p class="question-title">
-                    <span th:text="${result.questionOrder} + '. '">1. </span>
-                    <span th:text="${result.questionText}">Question text placeholder</span>
-                </p>
-            </th:block>
-
-            <p>
-                Your Answer:
-                <span class="user-answer"
-                      th:text="${#strings.isEmpty(result.userResponse)} ? '--- SKIPPED ---' : ${result.userResponse}"
-                      th:classappend="${result.isCorrect()} ? 'correct' : 'incorrect'">
-                    User's Answer
-                </span>
-
-                <span th:if="${!result.isCorrect()}" class="correct-display">
-                    (Correct: [[${result.correctAnswer}]])
-                </span>
-            </p>
-
-        </th:block>
+                <div class="text-left space-y-2">
+                    <div class="text-lg">
+                        You correctly answered <span class="font-bold text-green-600" th:text="${score}">0</span> questions.
+                    </div>
+                    <div class="text-sm text-gray-500 max-w-xs">
+                        Review your answers below to understand your mistakes and improve your band score.
+                    </div>
+                    <div class="pt-4">
+                        <a th:href="@{/reading/tests}" class="inline-flex items-center px-6 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg transition shadow-md text-sm font-medium">
+                            <i class="fas fa-arrow-left mr-2"></i> Back to Test List
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-</div>
+
+    <div class="mb-10 animate-up" style="animation-delay: 0.1s;">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 bg-red-100 text-red-600 rounded-full flex items-center justify-center">
+                <i class="fas fa-brain text-xl"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-800">AI Performance Analysis</h2>
+        </div>
+
+        <input type="hidden" id="testId" th:value="${testId}">
+
+        <div id="loading-review-message" class="bg-white p-10 rounded-xl shadow-sm text-center border border-gray-100">
+            <i class="fas fa-circle-notch fa-spin text-4xl text-red-500 mb-4"></i>
+            <p class="text-lg text-gray-600 font-medium">Generating comprehensive review...</p>
+            <p class="text-sm text-gray-400">Analyzing vocabulary, strategy, and question types.</p>
+        </div>
+
+        <div id="comprehensive-review-container" class="grid grid-cols-1 md:grid-cols-2 gap-6 hidden">
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-500">
+                <h3 class="text-blue-600 font-bold uppercase text-xs tracking-wider mb-3 flex items-center gap-2">
+                    <i class="fas fa-chart-pie"></i> Overview Summary
+                </h3>
+                <p id="review-summary" class="text-gray-700 text-sm leading-relaxed">Loading...</p>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-yellow-500">
+                <h3 class="text-yellow-600 font-bold uppercase text-xs tracking-wider mb-3 flex items-center gap-2">
+                    <i class="fas fa-book"></i> Vocabulary Gaps
+                </h3>
+                <p id="review-vocabulary" class="text-gray-700 text-sm leading-relaxed">Loading...</p>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-purple-500">
+                <h3 class="text-purple-600 font-bold uppercase text-xs tracking-wider mb-3 flex items-center gap-2">
+                    <i class="fas fa-tasks"></i> Question Types
+                </h3>
+                <p id="review-question-type" class="text-gray-700 text-sm leading-relaxed">Loading...</p>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-green-500">
+                <h3 class="text-green-600 font-bold uppercase text-xs tracking-wider mb-3 flex items-center gap-2">
+                    <i class="fas fa-lightbulb"></i> Strategic Advice
+                </h3>
+                <p id="review-strategy" class="text-gray-700 text-sm leading-relaxed">Loading...</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden animate-up" style="animation-delay: 0.2s;">
+        <div class="bg-gray-50 px-6 py-4 border-b border-gray-200">
+            <h2 class="text-xl font-bold text-gray-800">Detailed Answer Breakdown</h2>
+        </div>
+
+        <div class="divide-y divide-gray-100">
+            <div th:each="result : ${submissionResults}" class="p-6 hover:bg-gray-50 transition-colors">
+
+                <th:block th:with="questionTypeId = ${result.questionTypeId}, isSummaryCompletion = ${questionTypeId == 8}">
+
+                    <div class="flex items-start gap-4">
+
+                        <div class="flex-shrink-0 mt-1">
+                                <span th:if="${result.isCorrect()}" class="w-8 h-8 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-check"></i>
+                                </span>
+                            <span th:unless="${result.isCorrect()}" class="w-8 h-8 bg-red-100 text-red-600 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-times"></i>
+                                </span>
+                        </div>
+
+                        <div class="flex-grow">
+                            <div class="mb-2">
+                                <span class="font-bold text-gray-900 mr-2" th:text="${result.questionOrder} + '.'">1.</span>
+                                <span class="text-gray-800" th:text="${result.questionText}">Question text placeholder</span>
+                            </div>
+
+                            <div class="flex flex-wrap items-center gap-3 mt-3">
+
+                                <div class="flex items-center gap-2 px-3 py-1.5 rounded-md border"
+                                     th:classappend="${result.isCorrect()} ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'">
+                                    <span class="text-xs font-bold uppercase tracking-wide">Your Answer:</span>
+                                    <span class="font-bold"
+                                          th:text="${#strings.isEmpty(result.userResponse)} ? 'SKIPPED' : ${result.userResponse}">
+                                        </span>
+                                </div>
+
+                                <div th:if="${!result.isCorrect()}" class="flex items-center gap-2 px-3 py-1.5 rounded-md bg-gray-100 border border-gray-200 text-gray-700">
+                                    <span class="text-xs font-bold uppercase tracking-wide text-gray-500">Correct:</span>
+                                    <span class="font-bold text-green-700" th:text="${result.correctAnswer}">Answer</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </th:block>
+            </div>
+        </div>
+    </div>
+
+</main>
+
+<footer th:replace="~{fragments/footer :: footer}"></footer>
 
 <script type="text/javascript" th:src="@{/js/results-review-fetch.js}"></script>
 </body>
