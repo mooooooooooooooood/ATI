@@ -25,7 +25,7 @@ MySQL + Hibernate
 
 Maven
 
-Spring Boot Admin
+Spring Boot
 
 External AI API (Gemini / Custom API)
 
