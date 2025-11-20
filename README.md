@@ -29,8 +29,6 @@ Spring Boot
 
 External AI API (Gemini / Custom API)
 
-mp3agic (đọc file audio)
-
 📦 2. Yêu cầu hệ thống
 Công cụ	Version
 Java	21
