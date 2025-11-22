@@ -162,7 +162,7 @@ SET @g3_4_id = LAST_INSERT_ID();
 
 -- G9: Part 4 - Notes Completion (Q31-40)
 INSERT INTO listening_question_group (section_id, instructions, image_url, group_order) VALUES
-(@s4_id, 'Complete the notes below. Write ONE WORD ONLY for each answer.', 'https://pub-cdba06683f864ed78697b31fd99e33e9.r2.dev/cam20-test1-part4.png', 1);
+(@s4_id, 'Complete the notes below. Write ONE WORD ONLY for each answer.', 'https://pub-cdba06683f864ed78697b31fd99e33e9.r2.dev/Screenshot%202025-11-23%20062753.png', 1);
 SET @g4_id = LAST_INSERT_ID();
 
 -- 4️⃣ Insert Individual Questions
@@ -249,12 +249,12 @@ SET @s4_id_2 = (SELECT section_id FROM listening_section WHERE section_order = 4
 
 -- G1: Part 1 - Table Completion (Q1-10)
 INSERT INTO listening_question_group (section_id, instructions, image_url, group_order) VALUES
-(@s1_id_2, 'Complete the table below. Write ONE WORD AND/OR A NUMBER for each answer.', 'https://pub-cdba06683f864ed78697b31fd99e33e9.r2.dev/cam20-test2-part1.png', 1);
+(@s1_id_2, 'Complete the table below. Write ONE WORD AND/OR A NUMBER for each answer.', 'https://pub-cdba06683f864ed78697b31fd99e33e9.r2.dev/cam20-test2-part1-1.png', 1);
 SET @g1_2_id = LAST_INSERT_ID();
 
 -- G2: Part 2 - Matching (Q11-16)
 INSERT INTO listening_question_group (section_id, instructions, image_url, group_order) VALUES
-(@s2_id_2, 'What is the role of the volunteers in each of the following activities? Choose SIX answers from the box and write the correct letter, A-I, next to 11-16.', NULL, 1);
+(@s2_id_2, 'What is the role of the volunteers in each of the following activities? Choose SIX answers from the box and write the correct letter, A-I, next to 11-16.', 'https://pub-cdba06683f864ed78697b31fd99e33e9.r2.dev/cam20-test2-part1-2', 1);
 SET @g2_1_2_id = LAST_INSERT_ID();
 
 -- G3: Part 2 - Multiple Choice (Q17-20)

@@ -3,6 +3,7 @@ package com.ieltsgrading.ielts_evaluator.controller;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ieltsgrading.ielts_evaluator.dto.listening.ListeningSubmissionDTO;
+import com.ieltsgrading.ielts_evaluator.dto.listening.ReviewResponseDTO;
 import com.ieltsgrading.ielts_evaluator.model.User; // Assuming User model is generic
 import com.ieltsgrading.ielts_evaluator.model.listening.ListeningQuestion;
 import com.ieltsgrading.ielts_evaluator.model.listening.ListeningQuestionGroup;
@@ -176,5 +177,11 @@ public class ListeningTestController {
 
         // Assuming the service redirects to a review page or returns a model for a results page
         return mav;
+    }
+    @PostMapping("/get-test-review/{testId}")
+    @ResponseBody // <--- This is the key! It returns JSON data, not a HTML page
+    public ReviewResponseDTO getTestReview(@PathVariable int testId) {
+        // Calls the service method we fixed earlier to get the AI analysis
+        return listeningTestService.getTestReview(testId);
     }
 }

@@ -8,9 +8,6 @@ import java.util.List;
 public class GeminiRequest {
     private List<Content> contents;
 
-
-
-
     public GeminiRequest(String prompt) {
         this.contents = List.of(new Content(prompt));
     }
