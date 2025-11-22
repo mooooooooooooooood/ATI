@@ -21,8 +21,7 @@ D:\ATI\ATI\src\main\java\com\ieltsgrading\ielts_evaluator\hook\listening.sql
 
 Run the Script: Execute the entire file using the MySQL Command Line Client. This will create tables, drop old data, and insert all six full tests (including audio/image links).
 
-# Open Command Prompt / Terminal
-# Execute the  4 command (replace [USERNAME])
+# Open Command Prompt / Terminal and Execute the  4 command (replace [USERNAME])
 mysql -u [USERNAME] -p ielts_db < D:\ATI\ATI\src\main\java\com\ieltsgrading\ielts_evaluator\hook\listening.sql
 
 mysql -u [USERNAME] -p ielts_db < D:\ATI\ATI\src\main\java\com\ieltsgrading\ielts_evaluator\hook\reading.sql
