@@ -31,11 +31,14 @@ mysql -u [USERNAME] -p ielts_db < [path the the project]\ATI\ATI\src\main\java\c
    Run all box in the colab link: https://colab.research.google.com/drive/1NU9AM5eZQDTbzTFC5KWQ4-_mih-C6nqj?usp=sharing
 4. Change the properties (add [Username] and [Password]  of your mysql server)
    spring.datasource.url=jdbc:mysql://localhost:3306/ielts_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
-   spring.datasource.username=
-   spring.datasource.password=
+   
+   spring.datasource.username=[Username]
+   
+   spring.datasource.password=[Password]
+   
    spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
 
-5. Build and Run Application
+6. Build and Run Application
 
 Build: Clean and install dependencies using Maven:
 
