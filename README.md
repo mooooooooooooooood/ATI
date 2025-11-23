@@ -35,8 +35,7 @@ mysql -u [USERNAME] -p ielts_db < [path the the project]\ATI\ATI\src\main\java\c
    spring.datasource.password=
    spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
 
-4. Build and Run Application
-Change 
+5. Build and Run Application
 
 Build: Clean and install dependencies using Maven:
 
