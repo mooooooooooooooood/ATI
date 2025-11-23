@@ -16,8 +16,6 @@ MySQL Server: Version 8.0 or higher (required for data persistence).
 
 The application tables must be populated with test data (questions, transcripts, URLs) before launching.
 
-
-
 Run the Script: Execute the entire file using the MySQL Command Line Client. This will create tables, drop old data, and insert all six full tests (including audio/image links).
 
 # Open Command Prompt / Terminal and Execute the  4 command (replace [USERNAME])
@@ -31,8 +29,14 @@ mysql -u [USERNAME] -p ielts_db < [path the the project]\ATI\ATI\src\main\java\c
 
 3. Run the colab
    Run all box in the colab link: https://colab.research.google.com/drive/1NU9AM5eZQDTbzTFC5KWQ4-_mih-C6nqj?usp=sharing
+4. Change the properties (add [Username] and [Password]  of your mysql server)
+   spring.datasource.url=jdbc:mysql://localhost:3306/ielts_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+   spring.datasource.username=
+   spring.datasource.password=
+   spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
 
 4. Build and Run Application
+Change 
 
 Build: Clean and install dependencies using Maven:
 
