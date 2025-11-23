@@ -16,19 +16,18 @@ MySQL Server: Version 8.0 or higher (required for data persistence).
 
 The application tables must be populated with test data (questions, transcripts, URLs) before launching.
 
-Locate the SQL File: Find the master data script on your system:
-D:\ATI\ATI\src\main\java\com\ieltsgrading\ielts_evaluator\hook\listening.sql
+
 
 Run the Script: Execute the entire file using the MySQL Command Line Client. This will create tables, drop old data, and insert all six full tests (including audio/image links).
 
 # Open Command Prompt / Terminal and Execute the  4 command (replace [USERNAME])
-mysql -u [USERNAME] -p ielts_db < D:\ATI\ATI\src\main\java\com\ieltsgrading\ielts_evaluator\hook\listening.sql
+mysql -u [USERNAME] -p ielts_db < [path the the project]\ATI\ATI\src\main\java\com\ieltsgrading\ielts_evaluator\hook\listening.sql
 
-mysql -u [USERNAME] -p ielts_db < D:\ATI\ATI\src\main\java\com\ieltsgrading\ielts_evaluator\hook\reading.sql
+mysql -u [USERNAME] -p ielts_db < [path the the project]\ATI\ATI\src\main\java\com\ieltsgrading\ielts_evaluator\hook\reading.sql
 
-mysql -u [USERNAME] -p ielts_db < D:\ATI\ATI\src\main\java\com\ieltsgrading\ielts_evaluator\hook\speaking.sql
+mysql -u [USERNAME] -p ielts_db < [path the the project]\ATI\ATI\src\main\java\com\ieltsgrading\ielts_evaluator\hook\speaking.sql
 
-mysql -u [USERNAME] -p ielts_db < D:\ATI\ATI\src\main\java\com\ieltsgrading\ielts_evaluator\hook\writing.sql
+mysql -u [USERNAME] -p ielts_db < [path the the project]\ATI\ATI\src\main\java\com\ieltsgrading\ielts_evaluator\hook\writing.sql
 
 3. Run the colab
    Run all box in the colab link: https://colab.research.google.com/drive/1NU9AM5eZQDTbzTFC5KWQ4-_mih-C6nqj?usp=sharing
