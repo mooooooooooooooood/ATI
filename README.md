@@ -1,6 +1,6 @@
 📝 Eo Eo – IELTS Grading Web
 
-Ứng dụng chấm điểm IELTS tự động được xây dựng bằng Spring Boot 3, Thymeleaf, Spring Security, và MySQL.
+Website chấm điểm IELTS tự động được xây dựng bằng Spring Boot 3, Thymeleaf, Spring Security, và MySQL.
 Dự án hỗ trợ upload audio, gọi API AI bên ngoài, quản lý người dùng, và xử lý bất đồng bộ.
 
 🚀 1. Công nghệ sử dụng
